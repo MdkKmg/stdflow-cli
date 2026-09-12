@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}stdflow-cli — résultat{% endblock %}
+{% block content %}
+  <h1>Résultat du login</h1>
+  <p class="subtitle">{{ config.keycloak_client_id }} @ {{ config.keycloak_realm }} — scope: {{ config.keycloak_scope }} — PKCE: {{ 'on' if config.enable_pkce else 'off' }} — DPoP: {{ 'on' if config.enable_dpop else 'off' }}</p>
+
+  {% if success %}
+    <div class="banner ok">✔ Authentification réussie{% if generated_at %} — {{ generated_at }}{% endif %}</div>
+  {% else %}
+    <div class="banner err">✘ Échec de l'échange du code contre un token (HTTP {{ token_error_status }}). Voir le détail de l'échange ci-dessous.</div>
+  {% endif %}
+
+  <h2>Échanges HTTP</h2>
+  {% for entry in transcript %}
+    <details {% if not success and loop.last %}open{% endif %}>
+      <summary>
+        <span class="step">{{ entry.step }}</span>
+        <span class="method">{{ entry.method }}</span>
+        <span style="color: var(--muted); font-family: var(--mono); font-size: 0.8rem;">{{ entry.url }}</span>
+        {% if entry.status_code %}
+          <span class="status {{ 's' ~ (entry.status_code // 100) }}">{{ entry.status_code }}</span>
+        {% endif %}
+      </summary>
+      <div class="body">
+        {% if entry.request_headers %}
+          <h4>Requête — headers</h4>
+          <pre>{{ entry.request_headers | pretty_json }}</pre>
+        {% endif %}
+        {% if entry.request_body %}
+          <h4>Requête — body</h4>
+          <pre>{{ entry.request_body | pretty_json }}</pre>
+        {% endif %}
+        {% if entry.response_headers %}
+          <h4>Réponse — headers</h4>
+          <pre>{{ entry.response_headers | pretty_json }}</pre>
+        {% endif %}
+        {% if entry.response_body %}
+          <h4>Réponse — body</h4>
+          <pre>{{ entry.response_body | pretty_json }}</pre>
+        {% endif %}
+      </div>
+    </details>
+  {% endfor %}
+
+  {% if success %}
+    <h2>JWT décodés</h2>
+    {% for name, content in decoded.items() %}
+      <div class="panel">
+        <strong style="font-family: var(--mono);">{{ name }}</strong>
+        <h4 style="color: var(--muted); font-size: 0.78rem; text-transform: uppercase; margin: 0.8rem 0 0.3rem;">Header</h4>
+        <pre>{{ content.header | default(content) | pretty_json }}</pre>
+        {% if content.payload is defined %}
+          <h4 style="color: var(--muted); font-size: 0.78rem; text-transform: uppercase; margin: 0.8rem 0 0.3rem;">Payload</h4>
+          <pre>{{ content.payload | pretty_json }}</pre>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    {% if userinfo %}
+      <h2>Réponse /userinfo</h2>
+      <pre>{{ userinfo | pretty_json }}</pre>
+    {% endif %}
+
+    <h2>Tokens bruts</h2>
+    <details>
+      <summary><span class="step">Afficher les tokens bruts</span></summary>
+      <div class="body">
+        <pre>{{ tokens | pretty_json }}</pre>
+      </div>
+    </details>
+  {% endif %}
+
+  <p style="margin-top: 2rem;"><a href="/">&larr; Nouveau login</a></p>
+{% endblock %}

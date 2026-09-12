@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}stdflow-cli{% endblock %}
+{% block content %}
+  <h1>stdflow-cli</h1>
+  <p class="subtitle">Test d'un login Authorization Code (standard flow) contre une configuration Keycloak.</p>
+
+  <div class="panel">
+    <table class="kv">
+      <tr><td>Keycloak</td><td>{{ config.keycloak_base_url }}</td></tr>
+      <tr><td>Realm</td><td>{{ config.keycloak_realm }}</td></tr>
+      <tr><td>Client ID</td><td>{{ config.keycloak_client_id }}</td></tr>
+      <tr><td>Type de client</td><td>{{ config.client_type }}{% if config.keycloak_client_secret %} (secret: {{ config.keycloak_client_secret }}){% endif %}</td></tr>
+      <tr><td>Scope</td><td>{{ config.keycloak_scope }}</td></tr>
+      <tr><td>PKCE (S256)</td><td><span class="badge {{ 'on' if config.enable_pkce else 'off' }}">{{ 'activé' if config.enable_pkce else 'désactivé' }}</span></td></tr>
+      <tr><td>DPoP</td><td><span class="badge {{ 'on' if config.enable_dpop else 'off' }}">{{ 'activé' if config.enable_dpop else 'désactivé' }}</span></td></tr>
+      <tr><td>Redirect URI</td><td>{{ config.redirect_uri }}</td></tr>
+      <tr><td>Discovery</td><td>{{ config.discovery_url }}</td></tr>
+    </table>
+  </div>
+
+  <p style="color: var(--muted); font-size: 0.85rem;">
+    Cette configuration est fixée par les variables d'environnement du déploiement
+    (voir README). Pour la modifier : changer le ConfigMap/Secret puis redéployer le pod.
+  </p>
+
+  <a class="btn" href="/login">Se connecter (standard flow)</a>
+{% endblock %}

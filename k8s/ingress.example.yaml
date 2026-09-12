@@ -1,0 +1,26 @@
+# Exemple d'Ingress (nginx). A adapter a votre controller/ingressClass et a
+# faire correspondre exactement a PUBLIC_BASE_URL (schema + host) dans le ConfigMap,
+# car c'est cette valeur qui sert a construire le redirect_uri envoye a Keycloak.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stdflow-cli
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - stdflow.mon-cluster.example.com
+      secretName: stdflow-cli-tls
+  rules:
+    - host: stdflow.mon-cluster.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: stdflow-cli
+                port:
+                  number: 80

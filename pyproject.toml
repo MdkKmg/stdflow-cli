@@ -1,0 +1,16 @@
+[project]
+name = "stdflow-cli"
+version = "0.1.0"
+description = "Outil de test de configurations Keycloak via un login standard flow (Authorization Code)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.30.6",
+    "httpx==0.27.2",
+    "jinja2==3.1.4",
+    "pydantic-settings==2.5.2",
+    "python-jose[cryptography]==3.3.0",
+]
+
+[tool.uv]
+package = false

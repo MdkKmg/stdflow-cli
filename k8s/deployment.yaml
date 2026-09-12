@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stdflow-cli
+  labels:
+    app: stdflow-cli
+spec:
+  # IMPORTANT : rester a 1 replica. L'etat d'une tentative de login (state, PKCE
+  # code_verifier, cle DPoP) est garde en memoire dans le pod ; avec plusieurs
+  # replicas le callback Keycloak peut arriver sur un autre pod que celui qui a
+  # initie le /login et echouera avec "state invalide ou expire".
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: stdflow-cli
+  template:
+    metadata:
+      labels:
+        app: stdflow-cli
+    spec:
+      containers:
+        - name: stdflow-cli
+          image: stdflow-cli:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: stdflow-cli-config
+            - secretRef:
+                name: stdflow-cli-secret
+                optional: true
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi

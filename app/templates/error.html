@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}stdflow-cli — erreur{% endblock %}
+{% block content %}
+  <h1>Login interrompu</h1>
+  <div class="banner err">✘ {{ error }}</div>
+  <div class="panel">
+    <p>{{ error_description }}</p>
+  </div>
+  <p><a href="/">&larr; Réessayer</a></p>
+{% endblock %}

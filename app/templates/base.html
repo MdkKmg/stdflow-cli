@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}stdflow-cli{% endblock %}</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --panel: #171a21;
+      --border: #2a2e37;
+      --text: #e6e6e6;
+      --muted: #9aa1ac;
+      --accent: #5aa9ff;
+      --ok: #4caf7d;
+      --err: #e0654a;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 2rem 1.25rem 4rem;
+      background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    main { max-width: 960px; margin: 0 auto; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    h2 { font-size: 1.05rem; margin: 2rem 0 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+    .subtitle { color: var(--muted); margin-top: 0; margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+    table.kv { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    table.kv td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.kv td:first-child { color: var(--muted); width: 220px; font-family: var(--mono); }
+    table.kv td:last-child { font-family: var(--mono); word-break: break-all; }
+    .badge { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .badge.on { background: rgba(76,175,125,0.15); color: var(--ok); }
+    .badge.off { background: rgba(154,161,172,0.15); color: var(--muted); }
+    .btn { display: inline-block; background: var(--accent); color: #0b0e13; font-weight: 600; text-decoration: none; padding: 0.65rem 1.4rem; border-radius: 8px; font-size: 0.95rem; }
+    .btn:hover { filter: brightness(1.08); }
+    pre { background: #0b0e13; border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.82rem; }
+    details { background: #0b0e13; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.6rem; }
+    summary { cursor: pointer; padding: 0.65rem 1rem; font-family: var(--mono); font-size: 0.85rem; list-style: none; display: flex; gap: 0.6rem; align-items: center; }
+    summary::-webkit-details-marker { display: none; }
+    summary .step { color: var(--text); font-weight: 600; font-family: system-ui, sans-serif; }
+    summary .method { color: var(--accent); }
+    summary .status { margin-left: auto; font-weight: 700; }
+    summary .status.s2 { color: var(--ok); }
+    summary .status.s4, summary .status.s5 { color: var(--err); }
+    details .body { padding: 0 1rem 1rem; }
+    details .body h4 { margin: 0.8rem 0 0.3rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    .banner { padding: 0.9rem 1.1rem; border-radius: 8px; font-weight: 600; margin-bottom: 1.5rem; }
+    .banner.ok { background: rgba(76,175,125,0.12); color: var(--ok); border: 1px solid rgba(76,175,125,0.35); }
+    .banner.err { background: rgba(224,101,74,0.12); color: var(--err); border: 1px solid rgba(224,101,74,0.35); }
+    a { color: var(--accent); }
+    footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+  <main>
+    {% block content %}{% endblock %}
+    <footer>stdflow-cli &mdash; outil de test de configurations Keycloak (standard flow)</footer>
+  </main>
+</body>
+</html>
