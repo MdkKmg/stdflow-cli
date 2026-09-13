@@ -114,6 +114,27 @@ docker build -t stdflow-cli:latest .
 docker run --rm -p 8080:8080 --env-file .env stdflow-cli:latest
 ```
 
+## CI/CD
+
+Deux workflows GitHub Actions (`.github/workflows/`) :
+
+- **`ruff.yml`** — se déclenche sur chaque Pull Request vers `main` (branche protégée) :
+  `uv sync --locked`, puis `ruff format --check` et `ruff check`. Bloque la fusion si le
+  code n'est pas formaté ou si le lint échoue.
+- **`build-image.yml`** — se déclenche à la création d'un tag `v*` (ex. `v0.2.0`).
+  Vérifie que le commit tagué descend bien de `main`, puis build et push l'image sur
+  GitHub Container Registry : `ghcr.io/mdkkmg/stdflow-cli:<tag>` et `:latest`.
+  Aucun secret à configurer (utilise le `GITHUB_TOKEN` fourni automatiquement par Actions).
+  Au premier push, le package peut être créé en visibilité privée par défaut : la rendre
+  publique se fait dans GitHub → Packages → stdflow-cli → Package settings, si besoin.
+
+Pour publier une nouvelle version une fois la PR mergée sur `main` :
+```bash
+git checkout main && git pull
+git tag v0.2.0
+git push origin v0.2.0
+```
+
 ## Déployer sur Kubernetes
 
 ```bash
