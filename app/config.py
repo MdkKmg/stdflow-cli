@@ -30,11 +30,15 @@ class Settings(BaseSettings):
     )
     acr_values: str | None = Field(
         default=None,
-        description="Valeurs ACR par defaut (separees par des espaces), utilisees pour pre-remplir le champ dans l'UI",
+        description=(
+            "Valeurs ACR par defaut (separees par des espaces), utilisees pour pre-remplir le champ dans l'UI"
+        ),
     )
     acr_essential: bool = Field(
         default=False,
-        description="Pre-coche par defaut la case 'exiger strictement' (parametre claims essential) dans l'UI",
+        description=(
+            "Pre-coche par defaut la case 'exiger strictement' (parametre claims essential) dans l'UI"
+        ),
     )
 
     # --- Adressage public de l'app (pour construire le redirect_uri) ---
@@ -54,7 +58,10 @@ class Settings(BaseSettings):
     http_timeout_seconds: float = Field(default=10.0)
     http_verify_tls: bool = Field(
         default=True,
-        description="Verification du certificat TLS de Keycloak. A desactiver uniquement en dev local avec un certificat auto-signe.",
+        description=(
+            "Verification du certificat TLS de Keycloak. A desactiver uniquement en dev "
+            "local avec un certificat auto-signe."
+        ),
     )
 
     @field_validator("keycloak_base_url", "public_base_url")
@@ -71,7 +78,7 @@ class Settings(BaseSettings):
         return " ".join(scopes)
 
     @model_validator(mode="after")
-    def _derive_redirect_uri(self) -> "Settings":
+    def _derive_redirect_uri(self) -> Settings:
         if not self.redirect_uri:
             self.redirect_uri = f"{self.public_base_url}/callback"
         return self

@@ -33,8 +33,15 @@ store = StateStore(ttl_seconds=settings.state_ttl_seconds)
 
 if not settings.http_verify_tls:
     logger.warning(
-        '{"event": "tls_verification_disabled", '
-        '"message": "HTTP_VERIFY_TLS=false : les certificats TLS de Keycloak ne sont pas verifies. A ne jamais utiliser hors dev local."}'
+        json.dumps(
+            {
+                "event": "tls_verification_disabled",
+                "message": (
+                    "HTTP_VERIFY_TLS=false : les certificats TLS de Keycloak ne sont pas "
+                    "verifies. A ne jamais utiliser hors dev local."
+                ),
+            }
+        )
     )
 
 app = FastAPI(title="stdflow-cli")
@@ -71,7 +78,7 @@ def _annotate_dpop_proofs(transcript: list[dict]) -> None:
             continue
         try:
             entry["dpop_proof_decoded"] = decode_jwt_unverified(proof)
-        except Exception:  # noqa: BLE001 - affichage best-effort
+        except Exception:  # noqa: S110 - decodage cosmetique best-effort, ne doit pas casser l'affichage
             pass
 
 
@@ -100,7 +107,7 @@ async def login(request: Request, acr_values: str | None = None, acr_essential: 
         ) as client:
             discovery = await fetch_discovery(client, settings, transcript, logger)
     except httpx.HTTPError as exc:
-        logger.error('{"event": "discovery_failed", "error": %s}' % json.dumps(str(exc)))
+        logger.error(json.dumps({"event": "discovery_failed", "error": str(exc)}))
         return _render_error(
             request,
             "discovery_oidc_echouee",
@@ -149,7 +156,10 @@ async def callback(
                 "request": request,
                 "error": error or "state_invalide_ou_expire",
                 "error_description": error_description
-                or "Le parametre 'state' est manquant, inconnu ou a expire (tentative de login trop ancienne ou deja utilisee).",
+                or (
+                    "Le parametre 'state' est manquant, inconnu ou a expire "
+                    "(tentative de login trop ancienne ou deja utilisee)."
+                ),
             },
             status_code=400,
         )
@@ -213,7 +223,7 @@ async def callback(
                 logger=logger,
             )
     except httpx.HTTPError as exc:
-        logger.error('{"event": "token_exchange_failed", "error": %s}' % json.dumps(str(exc)))
+        logger.error(json.dumps({"event": "token_exchange_failed", "error": str(exc)}))
         return _render_error(
             request,
             "appel_http_echoue",

@@ -96,13 +96,15 @@ Ouvrir http://localhost:8080.
 
 Pour ajouter/mettre à jour une dépendance : `uv add <paquet>` (ou `uv lock --upgrade-package <paquet>`), ce qui met à jour `pyproject.toml` et `uv.lock` à committer ensemble.
 
-### Formatage (Ruff)
+### Formatage et lint (Ruff)
 
-Le code Python est formaté avec [Ruff](https://docs.astral.sh/ruff/) (config dans `pyproject.toml`, groupe de dépendances `dev`).
+Le code Python est formaté et linté avec [Ruff](https://docs.astral.sh/ruff/) (config dans `pyproject.toml`, groupe de dépendances `dev`). Règles activées : `E`/`F` (pycodestyle/pyflakes), `UP` (pyupgrade), `B` (bugbear), `S` (bandit).
 
 ```bash
 uv run ruff format .        # applique le formatage
-uv run ruff format --diff . # prévisualise sans modifier
+uv run ruff format --diff . # previsualise sans modifier
+uv run ruff check .         # lint
+uv run ruff check --fix .   # lint + corrections sures automatiques
 ```
 
 ## Construire et lancer l'image Docker
