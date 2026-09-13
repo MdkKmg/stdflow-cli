@@ -51,9 +51,7 @@ async def healthz():
 
 @app.get("/")
 async def index(request: Request):
-    return templates.TemplateResponse(
-        "index.html", {"request": request, "config": settings.redacted()}
-    )
+    return templates.TemplateResponse("index.html", {"request": request, "config": settings.redacted()})
 
 
 def _render_error(request: Request, error: str, error_description: str, status_code: int = 502):
@@ -97,7 +95,9 @@ async def login(request: Request, acr_values: str | None = None, acr_essential: 
         entry["dpop_jwk"] = dpop_jwk
 
     try:
-        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds, verify=settings.http_verify_tls) as client:
+        async with httpx.AsyncClient(
+            timeout=settings.http_timeout_seconds, verify=settings.http_verify_tls
+        ) as client:
             discovery = await fetch_discovery(client, settings, transcript, logger)
     except httpx.HTTPError as exc:
         logger.error('{"event": "discovery_failed", "error": %s}' % json.dumps(str(exc)))
@@ -108,16 +108,22 @@ async def login(request: Request, acr_values: str | None = None, acr_essential: 
         )
 
     auth_url, auth_params = build_authorization_url(
-        settings, discovery, state, code_challenge,
-        acr_values=acr_values, acr_essential=acr_essential,
+        settings,
+        discovery,
+        state,
+        code_challenge,
+        acr_values=acr_values,
+        acr_essential=acr_essential,
     )
     record_exchange(
-        transcript, logger,
+        transcript,
+        logger,
         step="2. Redirection du navigateur vers Keycloak (GET /auth)",
-        method="GET", url=discovery["authorization_endpoint"],
+        method="GET",
+        url=discovery["authorization_endpoint"],
         request_body=auth_params,
         note="Requete initiee par le navigateur (redirection HTTP), pas par ce serveur : "
-             "affichee ici pour verifier exactement ce qui est envoye a Keycloak.",
+        "affichee ici pour verifier exactement ce qui est envoye a Keycloak.",
     )
 
     entry["discovery"] = discovery
@@ -127,8 +133,13 @@ async def login(request: Request, acr_values: str | None = None, acr_essential: 
 
 
 @app.get("/callback")
-async def callback(request: Request, code: str | None = None, state: str | None = None,
-                    error: str | None = None, error_description: str | None = None):
+async def callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+):
     entry = store.pop(state) if state else None
 
     if error or entry is None:
@@ -160,11 +171,18 @@ async def callback(request: Request, code: str | None = None, state: str | None 
     acr_essential = entry.get("acr_essential", False)
 
     try:
-        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds, verify=settings.http_verify_tls) as client:
+        async with httpx.AsyncClient(
+            timeout=settings.http_timeout_seconds, verify=settings.http_verify_tls
+        ) as client:
             tokens, token_response = await exchange_code_for_tokens(
-                client, settings, discovery,
-                code=code, code_verifier=code_verifier, dpop_jwk=dpop_jwk,
-                transcript=transcript, logger=logger,
+                client,
+                settings,
+                discovery,
+                code=code,
+                code_verifier=code_verifier,
+                dpop_jwk=dpop_jwk,
+                transcript=transcript,
+                logger=logger,
             )
 
             if tokens is None:
@@ -178,17 +196,21 @@ async def callback(request: Request, code: str | None = None, state: str | None 
                         "success": False,
                         "token_error_status": token_response.status_code,
                         "pkce_info": pkce_info,
-                        "acr_info": {"requested": acr_requested, "essential": acr_essential} if acr_requested else None,
+                        "acr_info": {"requested": acr_requested, "essential": acr_essential}
+                        if acr_requested
+                        else None,
                     },
                     status_code=200,
                 )
 
             userinfo = await call_userinfo(
-                client, discovery,
+                client,
+                discovery,
                 access_token=tokens["access_token"],
                 token_type=tokens.get("token_type", "Bearer"),
                 dpop_jwk=dpop_jwk,
-                transcript=transcript, logger=logger,
+                transcript=transcript,
+                logger=logger,
             )
     except httpx.HTTPError as exc:
         logger.error('{"event": "token_exchange_failed", "error": %s}' % json.dumps(str(exc)))
@@ -222,7 +244,7 @@ async def callback(request: Request, code: str | None = None, state: str | None 
     acr_info = None
     acr_essential_unmet = False
     if acr_requested:
-        id_payload = (decoded.get("id_token", {}).get("payload") or {})
+        id_payload = decoded.get("id_token", {}).get("payload") or {}
         acr_received = id_payload.get("acr")
         acr_match = (acr_received in acr_requested.split()) if acr_received else None
         acr_info = {

@@ -3,6 +3,7 @@
 Volontairement simple (dict + TTL) : stdflow-cli est un outil de test destine a
 tourner en un seul replica. Voir README pour cette limitation.
 """
+
 from __future__ import annotations
 
 import time

@@ -5,6 +5,7 @@ tentative de login en cours, pour affichage dans l'UI de resultat, ET emis en
 JSON sur stdout via le logger standard (recupere par kube / le pilote de logs
 du cluster).
 """
+
 from __future__ import annotations
 
 import json

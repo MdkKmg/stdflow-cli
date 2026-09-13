@@ -4,6 +4,7 @@ Aucune valeur sensible ou fonctionnelle n'est modifiable depuis l'UI : tout se p
 au deploiement (env vars / ConfigMap / Secret kube). L'UI se contente d'afficher la
 configuration effective (avec le client secret masque) et de declencher le flow.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -24,7 +25,9 @@ class Settings(BaseSettings):
     # --- Parametres du flow ---
     keycloak_scope: str = Field(default="openid", description="Scopes demandes, separes par des espaces")
     enable_pkce: bool = Field(default=True, description="Active PKCE (S256) sur le standard flow")
-    enable_dpop: bool = Field(default=False, description="Active DPoP (RFC 9449) pour le token endpoint et userinfo")
+    enable_dpop: bool = Field(
+        default=False, description="Active DPoP (RFC 9449) pour le token endpoint et userinfo"
+    )
     acr_values: str | None = Field(
         default=None,
         description="Valeurs ACR par defaut (separees par des espaces), utilisees pour pre-remplir le champ dans l'UI",
@@ -35,13 +38,19 @@ class Settings(BaseSettings):
     )
 
     # --- Adressage public de l'app (pour construire le redirect_uri) ---
-    public_base_url: str = Field(..., description="URL publique de ce service, ex: https://stdflow.mon-cluster.dev")
-    redirect_uri: str | None = Field(default=None, description="Override explicite du redirect_uri, sinon derive de public_base_url")
+    public_base_url: str = Field(
+        ..., description="URL publique de ce service, ex: https://stdflow.mon-cluster.dev"
+    )
+    redirect_uri: str | None = Field(
+        default=None, description="Override explicite du redirect_uri, sinon derive de public_base_url"
+    )
 
     # --- Divers ---
     port: int = Field(default=8080)
     log_level: str = Field(default="INFO")
-    state_ttl_seconds: int = Field(default=300, description="Duree de vie max d'une tentative de login en cours")
+    state_ttl_seconds: int = Field(
+        default=300, description="Duree de vie max d'une tentative de login en cours"
+    )
     http_timeout_seconds: float = Field(default=10.0)
     http_verify_tls: bool = Field(
         default=True,

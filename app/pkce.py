@@ -1,4 +1,5 @@
 """Generation d'une paire PKCE (RFC 7636), methode S256 uniquement."""
+
 from __future__ import annotations
 
 import base64

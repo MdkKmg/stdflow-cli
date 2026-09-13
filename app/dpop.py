@@ -5,6 +5,7 @@ signer une preuve DPoP a chaque appel HTTP qui le necessite (token endpoint, use
 Gere le cas ou Keycloak exige un nonce serveur (erreur `use_dpop_nonce` + header
 `DPoP-Nonce`) : voir `dpop_retry_needed`.
 """
+
 from __future__ import annotations
 
 import base64
@@ -44,7 +45,8 @@ def jwk_thumbprint(jwk: dict) -> str:
     (membres tries par ordre alphabetique) des champs requis pour une cle EC."""
     canonical = json.dumps(
         {"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"], "y": jwk["y"]},
-        separators=(",", ":"), sort_keys=True,
+        separators=(",", ":"),
+        sort_keys=True,
     ).encode("ascii")
     digest = hashlib.sha256(canonical).digest()
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")

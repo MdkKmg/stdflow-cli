@@ -3,6 +3,7 @@
 Toutes les fonctions ici prennent un `transcript` (liste) + un logger, et y
 enregistrent chaque appel HTTP via `httplog.record_exchange`.
 """
+
 from __future__ import annotations
 
 import json
@@ -18,13 +19,17 @@ from .dpop import create_dpop_proof, is_use_dpop_nonce_error
 from .httplog import record_exchange
 
 
-async def fetch_discovery(client: httpx.AsyncClient, settings: Settings, transcript: list, logger: logging.Logger) -> dict:
+async def fetch_discovery(
+    client: httpx.AsyncClient, settings: Settings, transcript: list, logger: logging.Logger
+) -> dict:
     url = settings.discovery_url
     response = await client.get(url)
     record_exchange(
-        transcript, logger,
+        transcript,
+        logger,
         step="1. Discovery OIDC (.well-known)",
-        method="GET", url=url,
+        method="GET",
+        url=url,
         response=response,
     )
     response.raise_for_status()
@@ -111,10 +116,13 @@ async def exchange_code_for_tokens(
 
     response = await client.post(token_endpoint, data=data, headers=headers)
     record_exchange(
-        transcript, logger,
+        transcript,
+        logger,
         step=f"3. Echange du code contre des tokens{step_suffix}",
-        method="POST", url=token_endpoint,
-        request_headers=headers, request_body=data,
+        method="POST",
+        url=token_endpoint,
+        request_headers=headers,
+        request_body=data,
         response=response,
     )
 
@@ -125,10 +133,13 @@ async def exchange_code_for_tokens(
             headers["DPoP"] = create_dpop_proof(dpop_jwk, htm="POST", htu=token_endpoint, nonce=nonce)
             response = await client.post(token_endpoint, data=data, headers=headers)
             record_exchange(
-                transcript, logger,
+                transcript,
+                logger,
                 step="3b. Echange du code, retry avec DPoP-Nonce",
-                method="POST", url=token_endpoint,
-                request_headers=headers, request_body=data,
+                method="POST",
+                url=token_endpoint,
+                request_headers=headers,
+                request_body=data,
                 response=response,
             )
 
@@ -155,14 +166,19 @@ async def call_userinfo(
     headers = {"Authorization": f"{scheme} {access_token}"}
     if dpop_jwk:
         headers["DPoP"] = create_dpop_proof(
-            dpop_jwk, htm="GET", htu=userinfo_endpoint, access_token=access_token,
+            dpop_jwk,
+            htm="GET",
+            htu=userinfo_endpoint,
+            access_token=access_token,
         )
 
     response = await client.get(userinfo_endpoint, headers=headers)
     record_exchange(
-        transcript, logger,
+        transcript,
+        logger,
         step="4. Appel userinfo avec l'access_token obtenu",
-        method="GET", url=userinfo_endpoint,
+        method="GET",
+        url=userinfo_endpoint,
         request_headers=headers,
         response=response,
     )
@@ -172,13 +188,19 @@ async def call_userinfo(
         if is_use_dpop_nonce_error(response.status_code, body):
             nonce = response.headers.get("DPoP-Nonce")
             headers["DPoP"] = create_dpop_proof(
-                dpop_jwk, htm="GET", htu=userinfo_endpoint, nonce=nonce, access_token=access_token,
+                dpop_jwk,
+                htm="GET",
+                htu=userinfo_endpoint,
+                nonce=nonce,
+                access_token=access_token,
             )
             response = await client.get(userinfo_endpoint, headers=headers)
             record_exchange(
-                transcript, logger,
+                transcript,
+                logger,
                 step="4b. Appel userinfo, retry avec DPoP-Nonce",
-                method="GET", url=userinfo_endpoint,
+                method="GET",
+                url=userinfo_endpoint,
                 request_headers=headers,
                 response=response,
             )
