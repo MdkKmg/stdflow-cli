@@ -4,10 +4,83 @@
   <h1>Résultat du login</h1>
   <p class="subtitle">{{ config.keycloak_client_id }} @ {{ config.keycloak_realm }} — scope: {{ config.keycloak_scope }} — PKCE: {{ 'on' if config.enable_pkce else 'off' }} — DPoP: {{ 'on' if config.enable_dpop else 'off' }}</p>
 
-  {% if success %}
+  {% if success and acr_essential_unmet %}
+    <div class="banner warn">⚠ Token obtenu, mais l'ACR exigé strictement n'est pas satisfait — voir le panneau ACR ci-dessous. Keycloak a quand même délivré le token : côté client, cette réponse devrait normalement être traitée comme un échec d'authentification (claim "essential" non honoré).</div>
+  {% elif success %}
     <div class="banner ok">✔ Authentification réussie{% if generated_at %} — {{ generated_at }}{% endif %}</div>
   {% else %}
     <div class="banner err">✘ Échec de l'échange du code contre un token (HTTP {{ token_error_status }}). Voir le détail de l'échange ci-dessous.</div>
+  {% endif %}
+
+  {% if pkce_info or dpop_info or acr_info %}
+    <h2>Mécanismes utilisés</h2>
+
+    {% if acr_info %}
+      <div class="panel">
+        <strong>ACR (Authentication Context Class Reference)</strong>
+        <p class="field-hint">
+          Valeur(s) demandée(s) à Keycloak via <code>acr_values</code>{% if acr_info.essential %} et exigée(s) strictement via <code>claims.id_token.acr.essential</code>{% endif %}.
+        </p>
+        <table class="kv">
+          <tr><td>Demandé</td><td>{{ acr_info.requested }}</td></tr>
+          <tr><td>Exigence stricte</td><td>{{ 'oui (claims essential)' if acr_info.essential else 'non (hint acr_values uniquement)' }}</td></tr>
+          {% if acr_info.received is defined %}
+            <tr>
+              <td>acr reçu (id_token)</td>
+              <td>
+                {% if acr_info.received %}
+                  {{ acr_info.received }}<br>
+                  {% if acr_info.match %}
+                    <span class="match-ok">✔ correspond à une des valeurs demandées.</span>
+                  {% else %}
+                    <span class="match-warn">✘ ne correspond à aucune des valeurs demandées.</span>
+                  {% endif %}
+                {% else %}
+                  <span class="match-warn">absent de l'id_token — le client/realm ne renvoie pas de claim <code>acr</code>, ou le flow d'authentification utilisé n'en positionne pas.</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endif %}
+        </table>
+      </div>
+    {% endif %}
+
+    {% if pkce_info %}
+      {% include "_pkce_info.html" %}
+      <div class="panel">
+        <strong>Valeurs utilisées pour cette tentative</strong>
+        <table class="kv">
+          <tr><td>code_verifier</td><td>{{ pkce_info.code_verifier }}</td></tr>
+          <tr><td>code_challenge ({{ pkce_info.method }})</td><td>{{ pkce_info.code_challenge }}</td></tr>
+        </table>
+      </div>
+    {% endif %}
+
+    {% if dpop_info %}
+      {% include "_dpop_info.html" %}
+      <div class="panel">
+        <strong>Clé DPoP générée pour cette tentative</strong>
+        <table class="kv">
+          <tr><td>Clé publique (JWK)</td><td><pre style="margin: 0.4rem 0 0;">{{ dpop_info.public_jwk | pretty_json }}</pre></td></tr>
+          <tr><td>Empreinte (thumbprint SHA-256)</td><td>{{ dpop_info.thumbprint }}</td></tr>
+          <tr>
+            <td>cnf.jkt dans l'access_token</td>
+            <td>
+              {% if dpop_info.cnf_jkt %}
+                {{ dpop_info.cnf_jkt }}<br>
+                {% if dpop_info.match %}
+                  <span class="match-ok">✔ correspond à l'empreinte ci-dessus — le token est bien scellé à cette clé DPoP.</span>
+                {% else %}
+                  <span class="match-warn">✘ ne correspond PAS à l'empreinte calculée.</span>
+                {% endif %}
+              {% else %}
+                <span class="match-warn">absent de l'access_token — le client "{{ config.keycloak_client_id }}" n'a probablement pas l'option "OAuth 2.0 DPoP Bound Access Tokens" activée côté Keycloak.</span>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </div>
+    {% endif %}
   {% endif %}
 
   <h2>Échanges HTTP</h2>
@@ -25,6 +98,10 @@
         {% if entry.request_headers %}
           <h4>Requête — headers</h4>
           <pre>{{ entry.request_headers | pretty_json }}</pre>
+        {% endif %}
+        {% if entry.dpop_proof_decoded %}
+          <h4>Preuve DPoP décodée (header + payload du JWT envoyé dans le header <code>DPoP</code>)</h4>
+          <pre>{{ entry.dpop_proof_decoded | pretty_json }}</pre>
         {% endif %}
         {% if entry.request_body %}
           <h4>Requête — body</h4>
@@ -45,20 +122,39 @@
   {% if success %}
     <h2>JWT décodés</h2>
     {% for name, content in decoded.items() %}
-      <div class="panel">
-        <strong style="font-family: var(--mono);">{{ name }}</strong>
-        <h4 style="color: var(--muted); font-size: 0.78rem; text-transform: uppercase; margin: 0.8rem 0 0.3rem;">Header</h4>
-        <pre>{{ content.header | default(content) | pretty_json }}</pre>
-        {% if content.payload is defined %}
-          <h4 style="color: var(--muted); font-size: 0.78rem; text-transform: uppercase; margin: 0.8rem 0 0.3rem;">Payload</h4>
-          <pre>{{ content.payload | pretty_json }}</pre>
-        {% endif %}
-      </div>
+      <details>
+        <summary>
+          <span class="step">{{ name }}</span>
+          {% if content.error is defined %}
+            <span class="status s5">non décodable</span>
+          {% endif %}
+        </summary>
+        <div class="body">
+          {% if content.error is defined %}
+            <p style="color: var(--err);">{{ content.error }}</p>
+          {% else %}
+            <h4>Header</h4>
+            <pre>{{ content.header | pretty_json }}</pre>
+            {% if content.payload is defined %}
+              <h4>Payload</h4>
+              <pre>{{ content.payload | pretty_json }}</pre>
+            {% endif %}
+          {% endif %}
+        </div>
+      </details>
     {% endfor %}
 
     {% if userinfo %}
       <h2>Réponse /userinfo</h2>
-      <pre>{{ userinfo | pretty_json }}</pre>
+      <details open>
+        <summary>
+          <span class="step">GET /userinfo</span>
+        </summary>
+        <div class="body">
+          <h4>Réponse — body</h4>
+          <pre>{{ userinfo | pretty_json }}</pre>
+        </div>
+      </details>
     {% endif %}
 
     <h2>Tokens bruts</h2>
@@ -70,5 +166,17 @@
     </details>
   {% endif %}
 
-  <p style="margin-top: 2rem;"><a href="/">&larr; Nouveau login</a></p>
+  {% if logout_url %}
+    <p style="margin-top: 2rem;">
+      <a class="btn btn-secondary" href="{{ logout_url }}">Se déconnecter de Keycloak (logout)</a>
+    </p>
+    <p class="field-hint">
+      Ferme la session SSO côté Keycloak (RP-Initiated Logout, <code>end_session_endpoint</code>)
+      via l'<code>id_token</code> obtenu — pas juste côté navigateur. Sans ça, un nouveau
+      login peut être ré-authentifié silencieusement par la session Keycloak existante,
+      sans repasser par l'écran de connexion.
+    </p>
+  {% endif %}
+
+  <p style="margin-top: 1rem;"><a href="/">&larr; Nouveau login</a></p>
 {% endblock %}

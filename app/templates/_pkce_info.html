@@ -1,0 +1,18 @@
+<details class="info">
+  <summary>🔐 Comprendre PKCE (Proof Key for Code Exchange)</summary>
+  <div class="info-body">
+    <p>PKCE protège le standard flow contre l'interception du code d'autorisation, en particulier pour les clients publics (sans <code>client_secret</code>).</p>
+    <ul>
+      <li><strong>code_verifier</strong> — chaîne aléatoire (43 à 128 caractères) générée par le client, gardée secrète, jamais transmise lors de la redirection initiale.</li>
+      <li><strong>code_challenge</strong> — empreinte SHA-256 du <code>code_verifier</code>, encodée en base64url (méthode <code>S256</code>). C'est elle, et non le secret, qui part dans l'URL d'autorisation.</li>
+    </ul>
+    <p>Déroulé du flow :</p>
+    <ol>
+      <li>Le client envoie <code>code_challenge</code> et <code>code_challenge_method=S256</code> à l'endpoint <code>/auth</code>.</li>
+      <li>Keycloak associe ce challenge au code d'autorisation qu'il va émettre.</li>
+      <li>À l'échange du code (<code>POST /token</code>), le client transmet cette fois le <code>code_verifier</code> en clair.</li>
+      <li>Keycloak recalcule <code>SHA-256(code_verifier)</code> et vérifie qu'il correspond au <code>code_challenge</code> reçu à l'étape 1.</li>
+    </ol>
+    <p>Un attaquant qui intercepterait le code d'autorisation (logs, historique navigateur, redirection mal sécurisée…) ne peut pas l'échanger contre un token : il ne connaît pas le <code>code_verifier</code>, resté uniquement en mémoire côté client d'origine.</p>
+  </div>
+</details>

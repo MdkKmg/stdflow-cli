@@ -29,15 +29,29 @@ Conçue pour tourner en un pod léger sur Kubernetes, en un seul replica.
    - la réponse `/userinfo` ;
    - les tokens bruts (repliés par défaut).
 
+Quand PKCE et/ou DPoP sont activés, l'UI affiche aussi des encarts pédagogiques
+(accordéons) expliquant le mécanisme, avec les valeurs réellement utilisées pour
+la tentative en cours : `code_verifier`/`code_challenge`, ou la clé publique DPoP,
+son empreinte (thumbprint RFC 7638) comparée au claim `cnf.jkt` de l'access_token
+reçu, et chaque preuve DPoP décodée à côté de la requête HTTP correspondante.
+
+La page `/` propose aussi un champ **ACR** (Authentication Context Class
+Reference) modifiable à chaque tentative, sans redéploiement : une valeur
+`acr_values` (hint standard) et une case "exiger strictement" qui ajoute en
+plus le paramètre OIDC `claims` avec `essential: true`. Le résultat compare le
+claim `acr` reçu dans l'`id_token` à la valeur demandée.
+
 Le décodage de JWT n'effectue **aucune vérification de signature** : c'est un
 outil de debug, pas un vérificateur de tokens (l'objectif est d'inspecter le
 contenu, pas de faire confiance au token).
 
 ## Configuration (variables d'environnement)
 
-Toute la configuration se fait par variables d'environnement — pas de formulaire
-runtime. Pour changer un paramètre : modifier le ConfigMap/Secret puis
-redéployer le pod.
+La quasi-totalité de la configuration se fait par variables d'environnement —
+pas de formulaire runtime. Pour changer un paramètre : modifier le
+ConfigMap/Secret puis redéployer le pod. Seule exception : le champ **ACR**
+(voir plus haut), modifiable directement dans l'UI à chaque tentative — les
+variables `ACR_VALUES`/`ACR_ESSENTIAL` ne servent qu'à pré-remplir ce champ.
 
 | Variable | Obligatoire | Défaut | Description |
 |---|---|---|---|
@@ -48,15 +62,20 @@ redéployer le pod.
 | `KEYCLOAK_SCOPE` | non | `openid` | Scopes demandés, séparés par des espaces (`openid` est ajouté automatiquement si absent) |
 | `ENABLE_PKCE` | non | `true` | Active PKCE (méthode `S256`) |
 | `ENABLE_DPOP` | non | `false` | Active DPoP (RFC 9449) sur le token endpoint et `/userinfo` |
+| `ACR_VALUES` | non | — | Pré-remplit le champ `acr_values` de l'UI (modifiable à chaque login) |
+| `ACR_ESSENTIAL` | non | `false` | Pré-coche la case "exiger strictement" de l'UI |
 | `PUBLIC_BASE_URL` | oui | — | URL publique du service (sert à construire le `redirect_uri` : `PUBLIC_BASE_URL/callback`) |
 | `REDIRECT_URI` | non | dérivé | Override explicite si le `redirect_uri` doit différer de `PUBLIC_BASE_URL/callback` |
 | `PORT` | non | `8080` | Port d'écoute |
 | `LOG_LEVEL` | non | `INFO` | Niveau de log |
 | `STATE_TTL_SECONDS` | non | `300` | Durée de vie max d'une tentative de login en cours |
+| `HTTP_VERIFY_TLS` | non | `true` | Vérification du certificat TLS de Keycloak. À passer à `false` uniquement en dev local face à un certificat auto-signé (ex. Keycloak lancé en `start-dev` sans vrai cert) — **jamais** en dehors de ce cas : le statut est loggué au démarrage et affiché en alerte sur `/`. |
 
 **Côté Keycloak**, le client doit avoir :
 - *Standard flow* activé (Authorization Code) ;
 - `PUBLIC_BASE_URL/callback` dans les *Valid Redirect URIs* ;
+- `PUBLIC_BASE_URL/` dans les *Valid post logout redirect URIs* (nécessaire pour
+  le bouton de logout sur la page de résultat) ;
 - si `ENABLE_PKCE=true` : rien de spécial à faire côté Keycloak (S256 est
   accepté par défaut) — pour forcer PKCE côté serveur, activer *Proof Key for
   Code Exchange Code Challenge Method* = `S256` sur le client ;

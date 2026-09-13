@@ -12,10 +12,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .config import get_settings
-from .dpop import generate_dpop_jwk
-from .httplog import configure_logging
+from .dpop import generate_dpop_jwk, jwk_thumbprint, public_jwk
+from .httplog import configure_logging, record_exchange
 from .oidc import (
     build_authorization_url,
+    build_logout_url,
     call_userinfo,
     decode_jwt_unverified,
     exchange_code_for_tokens,
@@ -29,6 +30,12 @@ BASE_DIR = Path(__file__).parent
 settings = get_settings()
 logger = configure_logging(settings.log_level)
 store = StateStore(ttl_seconds=settings.state_ttl_seconds)
+
+if not settings.http_verify_tls:
+    logger.warning(
+        '{"event": "tls_verification_disabled", '
+        '"message": "HTTP_VERIFY_TLS=false : les certificats TLS de Keycloak ne sont pas verifies. A ne jamais utiliser hors dev local."}'
+    )
 
 app = FastAPI(title="stdflow-cli")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -57,17 +64,32 @@ def _render_error(request: Request, error: str, error_description: str, status_c
     )
 
 
+def _annotate_dpop_proofs(transcript: list[dict]) -> None:
+    """Decode chaque preuve DPoP presente dans les headers de requete du transcript,
+    pour affichage pedagogique (header + payload) a cote de chaque echange HTTP."""
+    for entry in transcript:
+        proof = (entry.get("request_headers") or {}).get("DPoP")
+        if not proof:
+            continue
+        try:
+            entry["dpop_proof_decoded"] = decode_jwt_unverified(proof)
+        except Exception:  # noqa: BLE001 - affichage best-effort
+            pass
+
+
 @app.get("/login")
-async def login(request: Request):
+async def login(request: Request, acr_values: str | None = None, acr_essential: bool = False):
     state = secrets.token_urlsafe(24)
     transcript: list[dict] = []
 
-    entry: dict = {"transcript": transcript}
+    acr_values = (acr_values or "").strip() or None
+    entry: dict = {"transcript": transcript, "acr_values": acr_values, "acr_essential": acr_essential}
 
     code_verifier = code_challenge = None
     if settings.enable_pkce:
         code_verifier, code_challenge = generate_pkce_pair()
         entry["code_verifier"] = code_verifier
+        entry["code_challenge"] = code_challenge
 
     dpop_jwk = None
     if settings.enable_dpop:
@@ -75,7 +97,7 @@ async def login(request: Request):
         entry["dpop_jwk"] = dpop_jwk
 
     try:
-        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds, verify=settings.http_verify_tls) as client:
             discovery = await fetch_discovery(client, settings, transcript, logger)
     except httpx.HTTPError as exc:
         logger.error('{"event": "discovery_failed", "error": %s}' % json.dumps(str(exc)))
@@ -85,14 +107,22 @@ async def login(request: Request):
             f"Impossible de recuperer {settings.discovery_url} : {exc}",
         )
 
+    auth_url, auth_params = build_authorization_url(
+        settings, discovery, state, code_challenge,
+        acr_values=acr_values, acr_essential=acr_essential,
+    )
+    record_exchange(
+        transcript, logger,
+        step="2. Redirection du navigateur vers Keycloak (GET /auth)",
+        method="GET", url=discovery["authorization_endpoint"],
+        request_body=auth_params,
+        note="Requete initiee par le navigateur (redirection HTTP), pas par ce serveur : "
+             "affichee ici pour verifier exactement ce qui est envoye a Keycloak.",
+    )
+
     entry["discovery"] = discovery
     store.set(state, entry)
 
-    auth_url = build_authorization_url(settings, discovery, state, code_challenge)
-    logger.info(
-        '{"event": "authorization_redirect", "url": "%s", "pkce": %s, "dpop": %s}'
-        % (auth_url, str(bool(code_challenge)).lower(), str(bool(dpop_jwk)).lower())
-    )
     return RedirectResponse(auth_url, status_code=302)
 
 
@@ -118,8 +148,19 @@ async def callback(request: Request, code: str | None = None, state: str | None 
     code_verifier = entry.get("code_verifier")
     dpop_jwk = entry.get("dpop_jwk")
 
+    pkce_info = None
+    if code_verifier:
+        pkce_info = {
+            "code_verifier": code_verifier,
+            "code_challenge": entry.get("code_challenge"),
+            "method": "S256",
+        }
+
+    acr_requested = entry.get("acr_values")
+    acr_essential = entry.get("acr_essential", False)
+
     try:
-        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds, verify=settings.http_verify_tls) as client:
             tokens, token_response = await exchange_code_for_tokens(
                 client, settings, discovery,
                 code=code, code_verifier=code_verifier, dpop_jwk=dpop_jwk,
@@ -127,6 +168,7 @@ async def callback(request: Request, code: str | None = None, state: str | None 
             )
 
             if tokens is None:
+                _annotate_dpop_proofs(transcript)
                 return templates.TemplateResponse(
                     "result.html",
                     {
@@ -135,6 +177,8 @@ async def callback(request: Request, code: str | None = None, state: str | None 
                         "transcript": transcript,
                         "success": False,
                         "token_error_status": token_response.status_code,
+                        "pkce_info": pkce_info,
+                        "acr_info": {"requested": acr_requested, "essential": acr_essential} if acr_requested else None,
                     },
                     status_code=200,
                 )
@@ -162,6 +206,39 @@ async def callback(request: Request, code: str | None = None, state: str | None 
             except Exception as exc:  # noqa: BLE001 - token peut etre opaque (non-JWT)
                 decoded[key] = {"error": f"Non decodable en JWT ({exc})"}
 
+    _annotate_dpop_proofs(transcript)
+
+    dpop_info = None
+    if dpop_jwk:
+        thumbprint = jwk_thumbprint(dpop_jwk)
+        cnf_jkt = (decoded.get("access_token", {}).get("payload") or {}).get("cnf", {}).get("jkt")
+        dpop_info = {
+            "public_jwk": public_jwk(dpop_jwk),
+            "thumbprint": thumbprint,
+            "cnf_jkt": cnf_jkt,
+            "match": (cnf_jkt == thumbprint) if cnf_jkt else None,
+        }
+
+    acr_info = None
+    acr_essential_unmet = False
+    if acr_requested:
+        id_payload = (decoded.get("id_token", {}).get("payload") or {})
+        acr_received = id_payload.get("acr")
+        acr_match = (acr_received in acr_requested.split()) if acr_received else None
+        acr_info = {
+            "requested": acr_requested,
+            "essential": acr_essential,
+            "received": acr_received,
+            "match": acr_match,
+        }
+        # Cote client, une claim "essential" non satisfaite doit etre traitee comme un
+        # echec de l'authentification (RFC OIDC), meme si Keycloak a quand meme emis un
+        # token : Keycloak ne bloque l'emission que si le realm a un flow de step-up
+        # (Level of Authentication) configure pour le niveau demande.
+        acr_essential_unmet = acr_essential and acr_match is not True
+
+    logout_url = build_logout_url(settings, discovery, tokens.get("id_token"))
+
     return templates.TemplateResponse(
         "result.html",
         {
@@ -169,9 +246,14 @@ async def callback(request: Request, code: str | None = None, state: str | None 
             "config": settings.redacted(),
             "transcript": transcript,
             "success": True,
+            "acr_essential_unmet": acr_essential_unmet,
             "tokens": tokens,
             "decoded": decoded,
             "userinfo": userinfo,
             "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "pkce_info": pkce_info,
+            "dpop_info": dpop_info,
+            "acr_info": acr_info,
+            "logout_url": logout_url,
         },
     )

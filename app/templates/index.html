@@ -13,6 +13,7 @@
       <tr><td>Scope</td><td>{{ config.keycloak_scope }}</td></tr>
       <tr><td>PKCE (S256)</td><td><span class="badge {{ 'on' if config.enable_pkce else 'off' }}">{{ 'activé' if config.enable_pkce else 'désactivé' }}</span></td></tr>
       <tr><td>DPoP</td><td><span class="badge {{ 'on' if config.enable_dpop else 'off' }}">{{ 'activé' if config.enable_dpop else 'désactivé' }}</span></td></tr>
+      <tr><td>Vérification TLS</td><td><span class="badge {{ 'on' if config.http_verify_tls else 'warn' }}">{{ 'activée' if config.http_verify_tls else '⚠ désactivée (dev only)' }}</span></td></tr>
       <tr><td>Redirect URI</td><td>{{ config.redirect_uri }}</td></tr>
       <tr><td>Discovery</td><td>{{ config.discovery_url }}</td></tr>
     </table>
@@ -23,5 +24,38 @@
     (voir README). Pour la modifier : changer le ConfigMap/Secret puis redéployer le pod.
   </p>
 
-  <a class="btn" href="/login">Se connecter (standard flow)</a>
+  {% if config.enable_pkce or config.enable_dpop %}
+    <h2>Mécanismes activés</h2>
+    {% if config.enable_pkce %}{% include "_pkce_info.html" %}{% endif %}
+    {% if config.enable_dpop %}{% include "_dpop_info.html" %}{% endif %}
+  {% endif %}
+
+  <form method="get" action="/login">
+    <div class="panel">
+      <strong>Paramètre ACR (optionnel)</strong>
+      <p class="field-hint">
+        Demande un niveau d'authentification (Authentication Context Class Reference)
+        spécifique à Keycloak pour ce login — utile pour tester des flows conditionnels
+        (step-up auth, OTP conditionnel…).
+      </p>
+      <label class="field-label">
+        acr_values (une ou plusieurs valeurs séparées par des espaces)
+        <input
+          class="field-input" type="text" name="acr_values"
+          value="{{ config.acr_values or '' }}"
+          placeholder="ex: gold  ou  urn:mace:incommon:iap:silver"
+        >
+      </label>
+      <label class="field-checkbox">
+        <input type="checkbox" name="acr_essential" value="true" {% if config.acr_essential %}checked{% endif %}>
+        <span>
+          Exiger strictement cette valeur en plus du hint <code>acr_values</code>
+          (ajoute le paramètre OIDC <code>claims</code> avec <code>essential: true</code> —
+          Keycloak doit alors échouer l'authentification s'il ne peut pas la satisfaire).
+        </span>
+      </label>
+    </div>
+
+    <button type="submit" class="btn">Se connecter (standard flow)</button>
+  </form>
 {% endblock %}

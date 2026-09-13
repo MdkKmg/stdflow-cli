@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import time
 import uuid
 
@@ -36,6 +37,17 @@ def generate_dpop_jwk() -> dict:
 
 def public_jwk(private_jwk: dict) -> dict:
     return {k: v for k, v in private_jwk.items() if k != "d"}
+
+
+def jwk_thumbprint(jwk: dict) -> str:
+    """Empreinte JWK (RFC 7638) : hash SHA-256 de la representation JSON canonique
+    (membres tries par ordre alphabetique) des champs requis pour une cle EC."""
+    canonical = json.dumps(
+        {"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"], "y": jwk["y"]},
+        separators=(",", ":"), sort_keys=True,
+    ).encode("ascii")
+    digest = hashlib.sha256(canonical).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
 
 
 def create_dpop_proof(

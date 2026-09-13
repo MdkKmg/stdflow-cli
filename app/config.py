@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     keycloak_scope: str = Field(default="openid", description="Scopes demandes, separes par des espaces")
     enable_pkce: bool = Field(default=True, description="Active PKCE (S256) sur le standard flow")
     enable_dpop: bool = Field(default=False, description="Active DPoP (RFC 9449) pour le token endpoint et userinfo")
+    acr_values: str | None = Field(
+        default=None,
+        description="Valeurs ACR par defaut (separees par des espaces), utilisees pour pre-remplir le champ dans l'UI",
+    )
+    acr_essential: bool = Field(
+        default=False,
+        description="Pre-coche par defaut la case 'exiger strictement' (parametre claims essential) dans l'UI",
+    )
 
     # --- Adressage public de l'app (pour construire le redirect_uri) ---
     public_base_url: str = Field(..., description="URL publique de ce service, ex: https://stdflow.mon-cluster.dev")
@@ -35,6 +43,10 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
     state_ttl_seconds: int = Field(default=300, description="Duree de vie max d'une tentative de login en cours")
     http_timeout_seconds: float = Field(default=10.0)
+    http_verify_tls: bool = Field(
+        default=True,
+        description="Verification du certificat TLS de Keycloak. A desactiver uniquement en dev local avec un certificat auto-signe.",
+    )
 
     @field_validator("keycloak_base_url", "public_base_url")
     @classmethod
@@ -70,6 +82,9 @@ class Settings(BaseSettings):
             "keycloak_scope": self.keycloak_scope,
             "enable_pkce": self.enable_pkce,
             "enable_dpop": self.enable_dpop,
+            "acr_values": self.acr_values,
+            "acr_essential": self.acr_essential,
+            "http_verify_tls": self.http_verify_tls,
             "redirect_uri": self.redirect_uri,
             "discovery_url": self.discovery_url,
         }

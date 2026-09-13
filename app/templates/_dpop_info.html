@@ -1,0 +1,16 @@
+<details class="info">
+  <summary>🔑 Comprendre DPoP (Demonstrating Proof-of-Possession)</summary>
+  <div class="info-body">
+    <p>DPoP lie un token d'accès à une paire de clés que seul le client possède, pour empêcher qu'un token volé (ex. access_token intercepté) soit rejoué par un tiers.</p>
+    <p><strong>Preuve DPoP</strong> — pour chaque requête, le client construit un JWT signé avec sa clé privée. Ce JWT contient notamment :</p>
+    <ul>
+      <li><code>htm</code> — la méthode HTTP (GET, POST…)</li>
+      <li><code>htu</code> — l'URL cible</li>
+      <li><code>iat</code> / <code>jti</code> — horodatage et identifiant unique (anti-rejeu)</li>
+      <li>dans l'en-tête : la clé publique au format JWK</li>
+    </ul>
+    <p><strong>Émission du token</strong> — lors de la demande de token (<code>/token</code>), le client envoie déjà un en-tête <code>DPoP</code> avec cette preuve. L'Authorization Server (Keycloak) calcule l'empreinte (thumbprint SHA-256) de la clé publique et l'insère dans le token d'accès sous forme de claim <code>cnf.jkt</code>. Le token est ainsi « scellé » à cette clé.</p>
+    <p><strong>Requête vers l'API</strong> — pour chaque appel au serveur de ressources, le client envoie <code>Authorization: DPoP &lt;access_token&gt;</code> et une nouvelle preuve DPoP (nouveau <code>jti</code>, <code>htu</code> correspondant à l'endpoint appelé).</p>
+    <p><strong>Vérification</strong> — le serveur de ressources vérifie que la signature de la preuve correspond bien à la clé publique dont l'empreinte figure dans <code>cnf.jkt</code> du token, que le <code>jti</code> n'a pas déjà été vu récemment (anti-rejeu), et que <code>htm</code>/<code>htu</code> correspondent à la requête en cours.</p>
+  </div>
+</details>

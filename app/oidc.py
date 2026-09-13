@@ -5,6 +5,7 @@ enregistrent chaque appel HTTP via `httplog.record_exchange`.
 """
 from __future__ import annotations
 
+import json
 import logging
 import urllib.parse
 from typing import Any
@@ -35,7 +36,9 @@ def build_authorization_url(
     discovery: dict,
     state: str,
     code_challenge: str | None,
-) -> str:
+    acr_values: str | None = None,
+    acr_essential: bool = False,
+) -> tuple[str, dict]:
     params = {
         "response_type": "code",
         "client_id": settings.keycloak_client_id,
@@ -46,7 +49,36 @@ def build_authorization_url(
     if code_challenge:
         params["code_challenge"] = code_challenge
         params["code_challenge_method"] = "S256"
-    return f"{discovery['authorization_endpoint']}?{urllib.parse.urlencode(params)}"
+    if acr_values:
+        # "hint" standard, que Keycloak peut prendre en compte sans le forcer.
+        params["acr_values"] = acr_values
+        if acr_essential:
+            # exigence stricte via le parametre OIDC `claims` : Keycloak doit
+            # echouer l'authentification s'il ne peut pas satisfaire une de ces valeurs.
+            params["claims"] = json.dumps(
+                {"id_token": {"acr": {"essential": True, "values": acr_values.split()}}},
+                separators=(",", ":"),
+            )
+    url = f"{discovery['authorization_endpoint']}?{urllib.parse.urlencode(params)}"
+    return url, params
+
+
+def build_logout_url(settings: Settings, discovery: dict, id_token: str | None) -> str | None:
+    """URL de RP-Initiated Logout (OIDC) : ferme la session cote Keycloak, pas
+    seulement cote client. Necessite que `PUBLIC_BASE_URL/` soit dans les
+    'Valid post logout redirect URIs' du client Keycloak."""
+    end_session_endpoint = discovery.get("end_session_endpoint")
+    if not end_session_endpoint:
+        return None
+    params = {
+        "client_id": settings.keycloak_client_id,
+        "post_logout_redirect_uri": f"{settings.public_base_url}/",
+    }
+    if id_token:
+        # evite la page de confirmation "voulez-vous vraiment vous deconnecter ?"
+        # et cible precisement la session associee a ce token.
+        params["id_token_hint"] = id_token
+    return f"{end_session_endpoint}?{urllib.parse.urlencode(params)}"
 
 
 async def exchange_code_for_tokens(
@@ -80,7 +112,7 @@ async def exchange_code_for_tokens(
     response = await client.post(token_endpoint, data=data, headers=headers)
     record_exchange(
         transcript, logger,
-        step=f"2. Echange du code contre des tokens{step_suffix}",
+        step=f"3. Echange du code contre des tokens{step_suffix}",
         method="POST", url=token_endpoint,
         request_headers=headers, request_body=data,
         response=response,
@@ -94,7 +126,7 @@ async def exchange_code_for_tokens(
             response = await client.post(token_endpoint, data=data, headers=headers)
             record_exchange(
                 transcript, logger,
-                step="2b. Echange du code, retry avec DPoP-Nonce",
+                step="3b. Echange du code, retry avec DPoP-Nonce",
                 method="POST", url=token_endpoint,
                 request_headers=headers, request_body=data,
                 response=response,
@@ -129,7 +161,7 @@ async def call_userinfo(
     response = await client.get(userinfo_endpoint, headers=headers)
     record_exchange(
         transcript, logger,
-        step="3. Appel userinfo avec l'access_token obtenu",
+        step="4. Appel userinfo avec l'access_token obtenu",
         method="GET", url=userinfo_endpoint,
         request_headers=headers,
         response=response,
@@ -145,7 +177,7 @@ async def call_userinfo(
             response = await client.get(userinfo_endpoint, headers=headers)
             record_exchange(
                 transcript, logger,
-                step="3b. Appel userinfo, retry avec DPoP-Nonce",
+                step="4b. Appel userinfo, retry avec DPoP-Nonce",
                 method="GET", url=userinfo_endpoint,
                 request_headers=headers,
                 response=response,
