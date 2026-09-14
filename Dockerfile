@@ -16,9 +16,10 @@ RUN uv sync --frozen --no-dev
 
 COPY app ./app
 
-RUN addgroup --system stdflow && adduser --system --ingroup stdflow stdflow \
-    && chown -R stdflow:stdflow /app
-USER stdflow
+RUN addgroup --system --gid 10001 stdflow \
+   && adduser --system --uid 10001 --ingroup stdflow stdflow \
+   && chown -R stdflow:stdflow /app
+USER 10001
 
 EXPOSE 8080
 
