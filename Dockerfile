@@ -1,5 +1,9 @@
 FROM python:3.12-slim AS base
 
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Binaire uv officiel (image distroless dediee), pas d'installation via pip necessaire.
 COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /uvx /usr/local/bin/
 
