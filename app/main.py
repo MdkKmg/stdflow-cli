@@ -21,6 +21,8 @@ from .oidc import (
     decode_jwt_unverified,
     exchange_code_for_tokens,
     fetch_discovery,
+    fetch_jwks,
+    verify_jwt_signature,
 )
 from .pkce import generate_pkce_pair
 from .store import StateStore
@@ -218,6 +220,13 @@ async def callback(
                 transcript=transcript,
                 logger=logger,
             )
+
+            try:
+                jwks = await fetch_jwks(client, discovery, transcript, logger)
+            except httpx.HTTPError:
+                # best-effort : la verification de signature reste informative, ne doit
+                # pas transformer un login reussi en page d'erreur.
+                jwks = None
     except httpx.HTTPError as exc:
         logger.error(json.dumps({"event": "token_exchange_failed", "error": str(exc)}))
         return _render_error(
@@ -231,6 +240,11 @@ async def callback(
         if tokens.get(key):
             try:
                 decoded[key] = decode_jwt_unverified(tokens[key])
+                # refresh_token n'est jamais destine a etre verifie par un tiers (seul
+                # Keycloak le valide, au /token) : sa cle de signature n'est pas forcement
+                # publiee dans le JWKS, afficher "invalide" ici serait trompeur.
+                if key != "refresh_token":
+                    decoded[key]["signature"] = verify_jwt_signature(tokens[key], jwks)
             except Exception as exc:  # noqa: BLE001 - token peut etre opaque (non-JWT)
                 decoded[key] = {"error": f"Non decodable en JWT ({exc})"}
 

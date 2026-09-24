@@ -48,12 +48,21 @@
       <details>
         <summary>
           <span class="step">{{ name }}</span>
-          {% if name == 'access_token' %}
-            <button type="button" class="btn-copy" onclick="tokenlabCopyToken(event, this)" data-token="{{ tokens[name] }}">📋 Copier l'access_token</button>
-          {% endif %}
-          {% if content.error is defined %}
-            <span class="status s5">non décodable</span>
-          {% endif %}
+          <span style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem;">
+            {% if name == 'access_token' %}
+              <button type="button" class="btn-copy" onclick="tokenlabCopyToken(event, this)" data-token="{{ tokens[name] }}">📋 Copier l'access_token</button>
+            {% endif %}
+            {% if content.signature %}
+              {% if content.signature.verified %}
+                <span class="match-ok" title="Signature vérifiée face aux clés publiques du realm (jwks_uri) — exp/aud/iss non vérifiés.">✔ signature valide</span>
+              {% else %}
+                <span class="match-warn" title="{{ content.signature.error }}">✘ signature invalide</span>
+              {% endif %}
+            {% endif %}
+            {% if content.error is defined %}
+              <span class="status s5" style="margin-left: 0;">non décodable</span>
+            {% endif %}
+          </span>
         </summary>
         <div class="body">
           {% if name == 'access_token' and dpop_info %}
