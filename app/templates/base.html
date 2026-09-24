@@ -68,6 +68,13 @@
     summary .step { color: var(--text); font-weight: 600; font-family: system-ui, sans-serif; }
     summary .method { color: var(--accent); }
     summary .status { margin-left: auto; font-weight: 700; }
+    .btn-copy {
+      margin-left: auto; background: transparent; color: var(--accent);
+      border: 1px solid var(--border); border-radius: 6px; padding: 0.25rem 0.6rem;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 0.78rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .btn-copy:hover { border-color: var(--accent); background: rgba(90,169,255,0.1); }
     summary .status.s2 { color: var(--ok); }
     summary .status.s4, summary .status.s5 { color: var(--err); }
     details .body { padding: 0 1rem 1rem; }
