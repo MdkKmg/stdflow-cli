@@ -11,7 +11,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from .config import get_settings
+from .config import HTTP_VERIFY_TLS, get_settings
 from .dpop import generate_dpop_jwk, jwk_thumbprint, public_jwk
 from .httplog import configure_logging, record_exchange
 from .oidc import (
@@ -31,7 +31,7 @@ settings = get_settings()
 logger = configure_logging(settings.log_level)
 store = StateStore(ttl_seconds=settings.state_ttl_seconds)
 
-if not settings.http_verify_tls:
+if not HTTP_VERIFY_TLS:
     logger.warning(
         json.dumps(
             {
@@ -103,7 +103,7 @@ async def login(request: Request, acr_values: str | None = None, acr_essential: 
 
     try:
         async with httpx.AsyncClient(
-            timeout=settings.http_timeout_seconds, verify=settings.http_verify_tls
+            timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS
         ) as client:
             discovery = await fetch_discovery(client, settings, transcript, logger)
     except httpx.HTTPError as exc:
@@ -182,7 +182,7 @@ async def callback(
 
     try:
         async with httpx.AsyncClient(
-            timeout=settings.http_timeout_seconds, verify=settings.http_verify_tls
+            timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS
         ) as client:
             tokens, token_response = await exchange_code_for_tokens(
                 client,

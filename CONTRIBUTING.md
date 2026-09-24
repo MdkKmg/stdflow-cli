@@ -68,7 +68,7 @@ Si vous ajoutez un comportement difficile à valider manuellement (ex. un cas d'
 
 ## Sécurité
 
-`stdflow-cli` est un outil de debug : il affiche des tokens complets et désactive volontairement certaines vérifications par configuration (`HTTP_VERIFY_TLS=false`, décodage JWT non vérifié). Toute contribution touchant à ces zones doit préserver le fait que ces comportements restent **explicites et opt-in**, jamais un défaut silencieux.
+`stdflow-cli` est un outil de debug : il affiche des tokens complets et désactive volontairement certaines vérifications (`HTTP_VERIFY_TLS=false` figé au build de l'image via le `Dockerfile`, décodage JWT non vérifié). Toute contribution touchant à ces zones doit préserver le fait que ces comportements restent **explicites et opt-in**, jamais un défaut silencieux — et pour `HTTP_VERIFY_TLS`, jamais surchargeable au déploiement.
 
 Pour signaler une vulnérabilité, ouvrir une issue privée ou contacter directement le mainteneur plutôt qu'une issue publique.
 

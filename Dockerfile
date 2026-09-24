@@ -12,6 +12,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PROJECT_ENVIRONMENT=/app/.venv
 
+# Verification TLS des appels HTTP vers Keycloak, figee au build de l'image (et non au
+# deploiement) : passer a "false" ici uniquement pour une image de dev face a un
+# certificat auto-signe, jamais en dehors de ce cas. Non surchargeable via .env/ConfigMap.
+ENV HTTP_VERIFY_TLS=true
+
 WORKDIR /app
 
 # Couche dependances seule, pour beneficier du cache Docker tant que pyproject/uv.lock ne changent pas.
