@@ -69,7 +69,12 @@ variables `ACR_VALUES`/`ACR_ESSENTIAL` ne servent qu'à pré-remplir ce champ.
 | `PORT` | non | `8080` | Port d'écoute |
 | `LOG_LEVEL` | non | `INFO` | Niveau de log |
 | `STATE_TTL_SECONDS` | non | `300` | Durée de vie max d'une tentative de login en cours |
-| `HTTP_VERIFY_TLS` | non | `true` | Vérification du certificat TLS de Keycloak. À passer à `false` uniquement en dev local face à un certificat auto-signé (ex. Keycloak lancé en `start-dev` sans vrai cert) — **jamais** en dehors de ce cas : le statut est loggué au démarrage et affiché en alerte sur `/`. |
+
+`HTTP_VERIFY_TLS` (vérification du certificat TLS de Keycloak) n'est **pas** configurable au
+déploiement : elle est figée à `true` dans le `Dockerfile` (ligne `ENV HTTP_VERIFY_TLS=true`).
+Ne la passer à `false` que sur une image de dev dédiée, en modifiant le `Dockerfile` et en
+reconstruisant l'image — jamais via une variable d'environnement au déploiement. Le statut est
+loggué au démarrage et affiché en alerte sur `/`.
 
 **Côté Keycloak**, le client doit avoir :
 - *Standard flow* activé (Authorization Code) ;

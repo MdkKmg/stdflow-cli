@@ -7,10 +7,19 @@ configuration effective (avec le client secret masque) et de declencher le flow.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Verification TLS des appels HTTP vers Keycloak.
+# Volontairement fige au niveau de l'image Docker (voir ENV dans le Dockerfile) et non
+# expose comme parametre d'environnement applicatif au meme titre que le reste de la
+# config : ce n'est pas une option a activer/desactiver au deploiement (.env, ConfigMap,
+# Secret), seulement au build de l'image. Defaut a True si absent (ex: execution locale
+# hors Docker).
+HTTP_VERIFY_TLS: bool = os.environ.get("HTTP_VERIFY_TLS", "true").strip().lower() in ("1", "true", "yes")
 
 
 class Settings(BaseSettings):
@@ -56,13 +65,6 @@ class Settings(BaseSettings):
         default=300, description="Duree de vie max d'une tentative de login en cours"
     )
     http_timeout_seconds: float = Field(default=10.0)
-    http_verify_tls: bool = Field(
-        default=True,
-        description=(
-            "Verification du certificat TLS de Keycloak. A desactiver uniquement en dev "
-            "local avec un certificat auto-signe."
-        ),
-    )
 
     @field_validator("keycloak_base_url", "public_base_url")
     @classmethod
@@ -100,7 +102,7 @@ class Settings(BaseSettings):
             "enable_dpop": self.enable_dpop,
             "acr_values": self.acr_values,
             "acr_essential": self.acr_essential,
-            "http_verify_tls": self.http_verify_tls,
+            "http_verify_tls": HTTP_VERIFY_TLS,
             "redirect_uri": self.redirect_uri,
             "discovery_url": self.discovery_url,
         }
