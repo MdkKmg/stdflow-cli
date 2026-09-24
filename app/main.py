@@ -102,9 +102,7 @@ async def login(request: Request, acr_values: str | None = None, acr_essential: 
         entry["dpop_jwk"] = dpop_jwk
 
     try:
-        async with httpx.AsyncClient(
-            timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS
-        ) as client:
+        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS) as client:
             discovery = await fetch_discovery(client, settings, transcript, logger)
     except httpx.HTTPError as exc:
         logger.error(json.dumps({"event": "discovery_failed", "error": str(exc)}))
@@ -181,9 +179,7 @@ async def callback(
     acr_essential = entry.get("acr_essential", False)
 
     try:
-        async with httpx.AsyncClient(
-            timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS
-        ) as client:
+        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS) as client:
             tokens, token_response = await exchange_code_for_tokens(
                 client,
                 settings,
