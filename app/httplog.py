@@ -20,7 +20,7 @@ SENSITIVE_BODY_FIELDS = {"client_secret"}
 
 
 def configure_logging(level: str = "INFO") -> logging.Logger:
-    logger = logging.getLogger("stdflow")
+    logger = logging.getLogger("tokenlab")
     logger.setLevel(level.upper())
     if not logger.handlers:
         handler = logging.StreamHandler(stream=sys.stdout)

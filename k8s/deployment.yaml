@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stdflow-cli
+  name: tokenlab
   labels:
-    app: stdflow-cli
+    app: tokenlab
 spec:
   # IMPORTANT : rester a 1 replica. L'etat d'une tentative de login (state, PKCE
   # code_verifier, cle DPoP) est garde en memoire dans le pod ; avec plusieurs
@@ -14,22 +14,22 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: stdflow-cli
+      app: tokenlab
   template:
     metadata:
       labels:
-        app: stdflow-cli
+        app: tokenlab
     spec:
       containers:
-        - name: stdflow-cli
-          image: stdflow-cli:latest
+        - name: tokenlab
+          image: tokenlab:latest
           ports:
             - containerPort: 8080
           envFrom:
             - configMapRef:
-                name: stdflow-cli-config
+                name: tokenlab-config
             - secretRef:
-                name: stdflow-cli-secret
+                name: tokenlab-secret
                 optional: true
           readinessProbe:
             httpGet:

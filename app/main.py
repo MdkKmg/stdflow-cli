@@ -44,7 +44,7 @@ if not HTTP_VERIFY_TLS:
         )
     )
 
-app = FastAPI(title="stdflow-cli")
+app = FastAPI(title="tokenlab")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 templates.env.filters["pretty_json"] = lambda obj: json.dumps(obj, indent=2, ensure_ascii=False, default=str)
 if (BASE_DIR / "static").exists():

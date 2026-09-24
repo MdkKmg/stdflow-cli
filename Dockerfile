@@ -25,9 +25,9 @@ RUN uv sync --frozen --no-dev
 
 COPY app ./app
 
-RUN addgroup --system --gid 10001 stdflow \
-   && adduser --system --uid 10001 --ingroup stdflow stdflow \
-   && chown -R stdflow:stdflow /app
+RUN addgroup --system --gid 10001 tokenlab \
+   && adduser --system --uid 10001 --ingroup tokenlab tokenlab \
+   && chown -R tokenlab:tokenlab /app
 USER 10001
 
 EXPOSE 8080

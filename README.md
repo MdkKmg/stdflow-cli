@@ -1,4 +1,4 @@
-# stdflow-cli
+# tokenlab
 
 Petite application (Python / FastAPI) pour tester une configuration Keycloak en
 réalisant un vrai login **standard flow** (Authorization Code) : elle logue
@@ -34,6 +34,13 @@ Quand PKCE et/ou DPoP sont activés, l'UI affiche aussi des encarts pédagogique
 la tentative en cours : `code_verifier`/`code_challenge`, ou la clé publique DPoP,
 son empreinte (thumbprint RFC 7638) comparée au claim `cnf.jkt` de l'access_token
 reçu, et chaque preuve DPoP décodée à côté de la requête HTTP correspondante.
+
+⚠️ Avec `ENABLE_DPOP=true`, l'`access_token` obtenu est lié à une clé privée
+éphémère (générée en mémoire, jamais affichée ni conservée) : il n'est **pas**
+utilisable tel quel dans un `curl -H "Authorization: Bearer ..."` ou tout autre
+client HTTP simple, le serveur de ressources exigeant une preuve DPoP fraîche
+signée à chaque appel. Pour récupérer un token directement réutilisable (tests
+d'API via curl, Postman, etc.), lancer la tentative avec DPoP désactivé.
 
 La page `/` propose aussi un champ **ACR** (Authentication Context Class
 Reference) modifiable à chaque tentative, sans redéploiement : une valeur
@@ -115,8 +122,8 @@ uv run ruff check --fix .   # lint + corrections sures automatiques
 ## Construire et lancer l'image Docker
 
 ```bash
-docker build -t stdflow-cli:latest .
-docker run --rm -p 8080:8080 --env-file .env stdflow-cli:latest
+docker build -t tokenlab:latest .
+docker run --rm -p 8080:8080 --env-file .env tokenlab:latest
 ```
 
 ## CI/CD
@@ -128,10 +135,10 @@ Deux workflows GitHub Actions (`.github/workflows/`) :
   code n'est pas formaté ou si le lint échoue.
 - **`build-image.yml`** — se déclenche à la création d'un tag `v*` (ex. `v0.2.0`).
   Vérifie que le commit tagué descend bien de `main`, puis build et push l'image sur
-  GitHub Container Registry : `ghcr.io/mdkkmg/stdflow-cli:<tag>` et `:latest`.
+  GitHub Container Registry : `ghcr.io/mdkkmg/tokenlab:<tag>` et `:latest`.
   Aucun secret à configurer (utilise le `GITHUB_TOKEN` fourni automatiquement par Actions).
   Au premier push, le package peut être créé en visibilité privée par défaut : la rendre
-  publique se fait dans GitHub → Packages → stdflow-cli → Package settings, si besoin.
+  publique se fait dans GitHub → Packages → tokenlab → Package settings, si besoin.
 
 Pour publier une nouvelle version une fois la PR mergée sur `main` :
 ```bash

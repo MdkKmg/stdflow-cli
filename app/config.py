@@ -1,4 +1,4 @@
-"""Configuration de stdflow-cli, entierement pilotee par variables d'environnement.
+"""Configuration de tokenlab, entierement pilotee par variables d'environnement.
 
 Aucune valeur sensible ou fonctionnelle n'est modifiable depuis l'UI : tout se passe
 au deploiement (env vars / ConfigMap / Secret kube). L'UI se contente d'afficher la
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
 
     # --- Adressage public de l'app (pour construire le redirect_uri) ---
     public_base_url: str = Field(
-        ..., description="URL publique de ce service, ex: https://stdflow.mon-cluster.dev"
+        ..., description="URL publique de ce service, ex: https://tokenlab.mon-cluster.dev"
     )
     redirect_uri: str | None = Field(
         default=None, description="Override explicite du redirect_uri, sinon derive de public_base_url"

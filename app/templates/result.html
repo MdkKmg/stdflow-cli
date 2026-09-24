@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}stdflow-cli — résultat{% endblock %}
+{% block title %}tokenlab — résultat{% endblock %}
 {% block content %}
   <h1>Résultat du login</h1>
   <p class="subtitle">{{ config.keycloak_client_id }} @ {{ config.keycloak_realm }} — scope: {{ config.keycloak_scope }} — PKCE: {{ 'on' if config.enable_pkce else 'off' }} — DPoP: {{ 'on' if config.enable_dpop else 'off' }}</p>
@@ -49,13 +49,22 @@
         <summary>
           <span class="step">{{ name }}</span>
           {% if name == 'access_token' %}
-            <button type="button" class="btn-copy" onclick="stdflowCopyToken(event, this)" data-token="{{ tokens[name] }}">📋 Copier l'access_token</button>
+            <button type="button" class="btn-copy" onclick="tokenlabCopyToken(event, this)" data-token="{{ tokens[name] }}">📋 Copier l'access_token</button>
           {% endif %}
           {% if content.error is defined %}
             <span class="status s5">non décodable</span>
           {% endif %}
         </summary>
         <div class="body">
+          {% if name == 'access_token' and dpop_info %}
+            <p class="field-hint" style="margin-bottom: 0.8rem;">
+              ⚠ Ce token est lié via DPoP (claim <code>cnf.jkt</code>) à une clé éphémère
+              non exposée par cet outil : il n'est <strong>pas</strong> utilisable tel quel
+              dans un <code>curl -H "Authorization: Bearer ..."</code> — le serveur de
+              ressources exigera à chaque appel une preuve DPoP fraîche signée avec cette
+              clé. Pour obtenir un token réutilisable directement en curl, désactivez DPoP.
+            </p>
+          {% endif %}
           {% if content.error is defined %}
             <p style="color: var(--err);">{{ content.error }}</p>
           {% else %}
@@ -180,7 +189,7 @@
   <p style="margin-top: 1rem;"><a href="/">&larr; Nouveau login</a></p>
 
   <script>
-    function stdflowCopyToken(event, btn) {
+    function tokenlabCopyToken(event, btn) {
       event.preventDefault();
       event.stopPropagation();
       const token = btn.getAttribute('data-token');

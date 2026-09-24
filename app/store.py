@@ -1,6 +1,6 @@
 """Store en memoire des tentatives de login en cours (state -> contexte du flow).
 
-Volontairement simple (dict + TTL) : stdflow-cli est un outil de test destine a
+Volontairement simple (dict + TTL) : tokenlab est un outil de test destine a
 tourner en un seul replica. Voir README pour cette limitation.
 """
 
