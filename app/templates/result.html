@@ -12,74 +12,83 @@
     <div class="banner err">✘ Échec de l'échange du code contre un token (HTTP {{ token_error_status }}). Voir le détail de l'échange ci-dessous.</div>
   {% endif %}
 
-  {% if pkce_info or dpop_info or acr_info %}
-    <h2>Mécanismes utilisés</h2>
-
-    {% if acr_info %}
-      <div class="panel">
-        <strong>ACR (Authentication Context Class Reference)</strong>
-        <p class="field-hint">
-          Valeur(s) demandée(s) à Keycloak via <code>acr_values</code>{% if acr_info.essential %} et exigée(s) strictement via <code>claims.id_token.acr.essential</code>{% endif %}.
-        </p>
-        <table class="kv">
-          <tr><td>Demandé</td><td>{{ acr_info.requested }}</td></tr>
-          <tr><td>Exigence stricte</td><td>{{ 'oui (claims essential)' if acr_info.essential else 'non (hint acr_values uniquement)' }}</td></tr>
-          {% if acr_info.received is defined %}
-            <tr>
-              <td>acr reçu (id_token)</td>
-              <td>
-                {% if acr_info.received %}
-                  {{ acr_info.received }}<br>
-                  {% if acr_info.match %}
-                    <span class="match-ok">✔ correspond à une des valeurs demandées.</span>
-                  {% else %}
-                    <span class="match-warn">✘ ne correspond à aucune des valeurs demandées.</span>
-                  {% endif %}
-                {% else %}
-                  <span class="match-warn">absent de l'id_token — le client/realm ne renvoie pas de claim <code>acr</code>, ou le flow d'authentification utilisé n'en positionne pas.</span>
-                {% endif %}
-              </td>
-            </tr>
-          {% endif %}
-        </table>
-      </div>
-    {% endif %}
-
-    {% if pkce_info %}
-      {% include "_pkce_info.html" %}
-      <div class="panel">
-        <strong>Valeurs utilisées pour cette tentative</strong>
-        <table class="kv">
-          <tr><td>code_verifier</td><td>{{ pkce_info.code_verifier }}</td></tr>
-          <tr><td>code_challenge ({{ pkce_info.method }})</td><td>{{ pkce_info.code_challenge }}</td></tr>
-        </table>
-      </div>
-    {% endif %}
-
-    {% if dpop_info %}
-      {% include "_dpop_info.html" %}
-      <div class="panel">
-        <strong>Clé DPoP générée pour cette tentative</strong>
-        <table class="kv">
-          <tr><td>Clé publique (JWK)</td><td><pre style="margin: 0.4rem 0 0;">{{ dpop_info.public_jwk | pretty_json }}</pre></td></tr>
-          <tr><td>Empreinte (thumbprint SHA-256)</td><td>{{ dpop_info.thumbprint }}</td></tr>
+  {% if acr_info %}
+    <div class="panel">
+      <strong>ACR (Authentication Context Class Reference)</strong>
+      <p class="field-hint">
+        Valeur(s) demandée(s) à Keycloak via <code>acr_values</code>{% if acr_info.essential %} et exigée(s) strictement via <code>claims.id_token.acr.essential</code>{% endif %}.
+      </p>
+      <table class="kv">
+        <tr><td>Demandé</td><td>{{ acr_info.requested }}</td></tr>
+        <tr><td>Exigence stricte</td><td>{{ 'oui (claims essential)' if acr_info.essential else 'non (hint acr_values uniquement)' }}</td></tr>
+        {% if acr_info.received is defined %}
           <tr>
-            <td>cnf.jkt dans l'access_token</td>
+            <td>acr reçu (id_token)</td>
             <td>
-              {% if dpop_info.cnf_jkt %}
-                {{ dpop_info.cnf_jkt }}<br>
-                {% if dpop_info.match %}
-                  <span class="match-ok">✔ correspond à l'empreinte ci-dessus — le token est bien scellé à cette clé DPoP.</span>
+              {% if acr_info.received %}
+                {{ acr_info.received }}<br>
+                {% if acr_info.match %}
+                  <span class="match-ok">✔ correspond à une des valeurs demandées.</span>
                 {% else %}
-                  <span class="match-warn">✘ ne correspond PAS à l'empreinte calculée.</span>
+                  <span class="match-warn">✘ ne correspond à aucune des valeurs demandées.</span>
                 {% endif %}
               {% else %}
-                <span class="match-warn">absent de l'access_token — le client "{{ config.keycloak_client_id }}" n'a probablement pas l'option "OAuth 2.0 DPoP Bound Access Tokens" activée côté Keycloak.</span>
+                <span class="match-warn">absent de l'id_token — le client/realm ne renvoie pas de claim <code>acr</code>, ou le flow d'authentification utilisé n'en positionne pas.</span>
               {% endif %}
             </td>
           </tr>
-        </table>
+        {% endif %}
+      </table>
+    </div>
+  {% endif %}
+
+  {% if success %}
+    <h2>JWT décodés</h2>
+    {% for name, content in decoded.items() %}
+      <details>
+        <summary>
+          <span class="step">{{ name }}</span>
+          {% if name == 'access_token' %}
+            <button type="button" class="btn-copy" onclick="stdflowCopyToken(event, this)" data-token="{{ tokens[name] }}">📋 Copier l'access_token</button>
+          {% endif %}
+          {% if content.error is defined %}
+            <span class="status s5">non décodable</span>
+          {% endif %}
+        </summary>
+        <div class="body">
+          {% if content.error is defined %}
+            <p style="color: var(--err);">{{ content.error }}</p>
+          {% else %}
+            <h4>Header</h4>
+            <pre>{{ content.header | pretty_json }}</pre>
+            {% if content.payload is defined %}
+              <h4>Payload</h4>
+              <pre>{{ content.payload | pretty_json }}</pre>
+            {% endif %}
+          {% endif %}
+        </div>
+      </details>
+    {% endfor %}
+
+    <h2>Tokens bruts</h2>
+    <details>
+      <summary><span class="step">Afficher les tokens bruts</span></summary>
+      <div class="body">
+        <pre>{{ tokens | pretty_json }}</pre>
       </div>
+    </details>
+
+    {% if userinfo %}
+      <h2>Réponse /userinfo</h2>
+      <details open>
+        <summary>
+          <span class="step">GET /userinfo</span>
+        </summary>
+        <div class="body">
+          <h4>Réponse — body</h4>
+          <pre>{{ userinfo | pretty_json }}</pre>
+        </div>
+      </details>
     {% endif %}
   {% endif %}
 
@@ -119,51 +128,41 @@
     </details>
   {% endfor %}
 
-  {% if success %}
-    <h2>JWT décodés</h2>
-    {% for name, content in decoded.items() %}
-      <details>
-        <summary>
-          <span class="step">{{ name }}</span>
-          {% if content.error is defined %}
-            <span class="status s5">non décodable</span>
-          {% endif %}
-        </summary>
-        <div class="body">
-          {% if content.error is defined %}
-            <p style="color: var(--err);">{{ content.error }}</p>
-          {% else %}
-            <h4>Header</h4>
-            <pre>{{ content.header | pretty_json }}</pre>
-            {% if content.payload is defined %}
-              <h4>Payload</h4>
-              <pre>{{ content.payload | pretty_json }}</pre>
+  {% if pkce_info %}
+    {% include "_pkce_info.html" %}
+    <div class="panel">
+      <strong>Valeurs utilisées pour cette tentative</strong>
+      <table class="kv">
+        <tr><td>code_verifier</td><td>{{ pkce_info.code_verifier }}</td></tr>
+        <tr><td>code_challenge ({{ pkce_info.method }})</td><td>{{ pkce_info.code_challenge }}</td></tr>
+      </table>
+    </div>
+  {% endif %}
+
+  {% if dpop_info %}
+    {% include "_dpop_info.html" %}
+    <div class="panel">
+      <strong>Clé DPoP générée pour cette tentative</strong>
+      <table class="kv">
+        <tr><td>Clé publique (JWK)</td><td><pre style="margin: 0.4rem 0 0;">{{ dpop_info.public_jwk | pretty_json }}</pre></td></tr>
+        <tr><td>Empreinte (thumbprint SHA-256)</td><td>{{ dpop_info.thumbprint }}</td></tr>
+        <tr>
+          <td>cnf.jkt dans l'access_token</td>
+          <td>
+            {% if dpop_info.cnf_jkt %}
+              {{ dpop_info.cnf_jkt }}<br>
+              {% if dpop_info.match %}
+                <span class="match-ok">✔ correspond à l'empreinte ci-dessus — le token est bien scellé à cette clé DPoP.</span>
+              {% else %}
+                <span class="match-warn">✘ ne correspond PAS à l'empreinte calculée.</span>
+              {% endif %}
+            {% else %}
+              <span class="match-warn">absent de l'access_token — le client "{{ config.keycloak_client_id }}" n'a probablement pas l'option "OAuth 2.0 DPoP Bound Access Tokens" activée côté Keycloak.</span>
             {% endif %}
-          {% endif %}
-        </div>
-      </details>
-    {% endfor %}
-
-    {% if userinfo %}
-      <h2>Réponse /userinfo</h2>
-      <details open>
-        <summary>
-          <span class="step">GET /userinfo</span>
-        </summary>
-        <div class="body">
-          <h4>Réponse — body</h4>
-          <pre>{{ userinfo | pretty_json }}</pre>
-        </div>
-      </details>
-    {% endif %}
-
-    <h2>Tokens bruts</h2>
-    <details>
-      <summary><span class="step">Afficher les tokens bruts</span></summary>
-      <div class="body">
-        <pre>{{ tokens | pretty_json }}</pre>
-      </div>
-    </details>
+          </td>
+        </tr>
+      </table>
+    </div>
   {% endif %}
 
   {% if logout_url %}
@@ -179,4 +178,39 @@
   {% endif %}
 
   <p style="margin-top: 1rem;"><a href="/">&larr; Nouveau login</a></p>
+
+  <script>
+    function stdflowCopyToken(event, btn) {
+      event.preventDefault();
+      event.stopPropagation();
+      const token = btn.getAttribute('data-token');
+      const restoreLabel = () => { btn.textContent = '📋 Copier l\'access_token'; };
+      const showCopied = () => {
+        btn.textContent = '✔ Copié';
+        setTimeout(restoreLabel, 1500);
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(token).then(showCopied).catch(() => {
+          btn.textContent = '✘ Échec de la copie';
+          setTimeout(restoreLabel, 1500);
+        });
+      } else {
+        const tmp = document.createElement('textarea');
+        tmp.value = token;
+        tmp.style.position = 'fixed';
+        tmp.style.opacity = '0';
+        document.body.appendChild(tmp);
+        tmp.focus();
+        tmp.select();
+        try {
+          document.execCommand('copy');
+          showCopied();
+        } catch (err) {
+          btn.textContent = '✘ Échec de la copie';
+          setTimeout(restoreLabel, 1500);
+        }
+        document.body.removeChild(tmp);
+      }
+    }
+  </script>
 {% endblock %}
