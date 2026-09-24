@@ -218,6 +218,57 @@ def decode_jwt_unverified(token: str) -> dict:
     }
 
 
+async def fetch_jwks(
+    client: httpx.AsyncClient, discovery: dict, transcript: list, logger: logging.Logger
+) -> dict | None:
+    jwks_uri = discovery.get("jwks_uri")
+    if not jwks_uri:
+        return None
+    response = await client.get(jwks_uri)
+    record_exchange(
+        transcript,
+        logger,
+        step="5. Recuperation des cles de signature du realm (JWKS)",
+        method="GET",
+        url=jwks_uri,
+        response=response,
+    )
+    if response.status_code != 200:
+        return None
+    return response.json()
+
+
+def verify_jwt_signature(token: str, jwks: dict | None) -> dict:
+    """Verifie uniquement la signature du JWT face aux cles publiques du realm
+    (jwks_uri) : verifie que Keycloak a bien emis/signe ce token, sans valider
+    exp/aud/iss (l'outil doit rester capable d'afficher un token expire ou
+    hors audience pour le debug, cf `decode_jwt_unverified`)."""
+    if not jwks:
+        return {"verified": False, "error": "JWKS indisponible"}
+    try:
+        header = jose_jwt.get_unverified_header(token)
+        kid = header.get("kid")
+        key = next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
+        if key is None:
+            return {"verified": False, "error": f"Aucune cle JWKS ne correspond au kid '{kid}'"}
+        jose_jwt.decode(
+            token,
+            key,
+            algorithms=[header.get("alg")],
+            options={
+                "verify_aud": False,
+                "verify_iss": False,
+                "verify_exp": False,
+                "verify_nbf": False,
+                "verify_iat": False,
+                "verify_at_hash": False,
+            },
+        )
+        return {"verified": True}
+    except Exception as exc:  # noqa: BLE001 - verification best-effort, ne doit jamais casser l'affichage
+        return {"verified": False, "error": str(exc)}
+
+
 def _safe_json(response: httpx.Response) -> dict | None:
     try:
         return response.json()
