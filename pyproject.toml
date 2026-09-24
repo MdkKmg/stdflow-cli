@@ -1,5 +1,5 @@
 [project]
-name = "stdflow-cli"
+name = "tokenlab"
 version = "0.1.0"
 description = "Outil de test de configurations Keycloak via un login standard flow (Authorization Code)"
 requires-python = ">=3.12"

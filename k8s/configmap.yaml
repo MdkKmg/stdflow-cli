@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: stdflow-cli-config
+  name: tokenlab-config
 data:
   KEYCLOAK_BASE_URL: "https://keycloak.example.com"
   KEYCLOAK_REALM: "my-realm"
-  KEYCLOAK_CLIENT_ID: "stdflow-cli"
+  KEYCLOAK_CLIENT_ID: "tokenlab"
   KEYCLOAK_SCOPE: "openid profile email"
   ENABLE_PKCE: "true"
   ENABLE_DPOP: "false"
   # URL publique par laquelle les utilisateurs (et le navigateur, pour le redirect_uri) atteignent ce service
-  PUBLIC_BASE_URL: "https://stdflow.mon-cluster.example.com"
+  PUBLIC_BASE_URL: "https://tokenlab.mon-cluster.example.com"
   LOG_LEVEL: "INFO"

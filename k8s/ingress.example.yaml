@@ -4,23 +4,23 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: stdflow-cli
+  name: tokenlab
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - stdflow.mon-cluster.example.com
-      secretName: stdflow-cli-tls
+        - tokenlab.mon-cluster.example.com
+      secretName: tokenlab-tls
   rules:
-    - host: stdflow.mon-cluster.example.com
+    - host: tokenlab.mon-cluster.example.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: stdflow-cli
+                name: tokenlab
                 port:
                   number: 80

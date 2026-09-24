@@ -1,4 +1,4 @@
-# Contribuer à stdflow-cli
+# Contribuer à tokenlab
 
 Merci de vouloir contribuer ! Ce document résume comment mettre en place l'environnement, les règles de style, et le processus de contribution.
 
@@ -12,8 +12,8 @@ Merci de vouloir contribuer ! Ce document résume comment mettre en place l'envi
 ## Mettre en place l'environnement local
 
 ```bash
-git clone https://github.com/MdkKmg/stdflow-cli.git
-cd stdflow-cli
+git clone https://github.com/MdkKmg/tokenlab.git
+cd tokenlab
 cp .env.example .env   # puis éditer avec les infos de votre Keycloak de test
 uv sync                # installe les dépendances (dont les outils de dev : ruff)
 uv run uvicorn app.main:app --reload --port 8080
@@ -68,7 +68,7 @@ Si vous ajoutez un comportement difficile à valider manuellement (ex. un cas d'
 
 ## Sécurité
 
-`stdflow-cli` est un outil de debug : il affiche des tokens complets et désactive volontairement certaines vérifications (`HTTP_VERIFY_TLS=false` figé au build de l'image via le `Dockerfile`, décodage JWT non vérifié). Toute contribution touchant à ces zones doit préserver le fait que ces comportements restent **explicites et opt-in**, jamais un défaut silencieux — et pour `HTTP_VERIFY_TLS`, jamais surchargeable au déploiement.
+`tokenlab` est un outil de debug : il affiche des tokens complets et désactive volontairement certaines vérifications (`HTTP_VERIFY_TLS=false` figé au build de l'image via le `Dockerfile`, décodage JWT non vérifié). Toute contribution touchant à ces zones doit préserver le fait que ces comportements restent **explicites et opt-in**, jamais un défaut silencieux — et pour `HTTP_VERIFY_TLS`, jamais surchargeable au déploiement.
 
 Pour signaler une vulnérabilité, ouvrir une issue privée ou contacter directement le mainteneur plutôt qu'une issue publique.
 
