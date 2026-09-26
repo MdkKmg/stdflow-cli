@@ -18,6 +18,10 @@ from .config import Settings
 from .dpop import create_dpop_proof, is_use_dpop_nonce_error
 from .httplog import record_exchange
 
+# Algorithmes de signature acceptes pour les tokens du realm : uniquement asymetriques
+# (jamais `none`, jamais HS* dont la "cle" serait partagee).
+ASYMMETRIC_ALGS = ("RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512", "EdDSA")
+
 
 async def fetch_discovery(
     client: httpx.AsyncClient, settings: Settings, transcript: list, logger: logging.Logger
@@ -40,6 +44,7 @@ def build_authorization_url(
     settings: Settings,
     discovery: dict,
     state: str,
+    nonce: str,
     code_challenge: str | None,
     acr_values: str | None = None,
     acr_essential: bool = False,
@@ -50,6 +55,7 @@ def build_authorization_url(
         "redirect_uri": settings.redirect_uri,
         "scope": settings.keycloak_scope,
         "state": state,
+        "nonce": nonce,
     }
     if code_challenge:
         params["code_challenge"] = code_challenge
@@ -242,7 +248,12 @@ def verify_jwt_signature(token: str, jwks: dict | None) -> dict:
     """Verifie uniquement la signature du JWT face aux cles publiques du realm
     (jwks_uri) : verifie que Keycloak a bien emis/signe ce token, sans valider
     exp/aud/iss (l'outil doit rester capable d'afficher un token expire ou
-    hors audience pour le debug, cf `decode_jwt_unverified`)."""
+    hors audience pour le debug, cf `decode_jwt_unverified`).
+
+    L'algorithme n'est jamais pris dans le header du token : c'est celui annonce par
+    la cle JWKS (ou a defaut un algorithme asymetrique) qui fait foi. Les en-tetes
+    `jku`/`x5u`/`jwk` du token sont ignores : seules les cles du jwks_uri du realm
+    sont utilisees."""
     if not jwks:
         return {"verified": False, "error": "JWKS indisponible"}
     try:
@@ -251,10 +262,14 @@ def verify_jwt_signature(token: str, jwks: dict | None) -> dict:
         key = next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
         if key is None:
             return {"verified": False, "error": f"Aucune cle JWKS ne correspond au kid '{kid}'"}
+        alg = header.get("alg")
+        allowed = [key["alg"]] if key.get("alg") else list(ASYMMETRIC_ALGS)
+        if alg not in allowed or alg not in ASYMMETRIC_ALGS:
+            return {"verified": False, "error": f"Algorithme '{alg}' refuse (attendu : {', '.join(allowed)})"}
         jose_jwt.decode(
             token,
             key,
-            algorithms=[header.get("alg")],
+            algorithms=allowed,
             options={
                 "verify_aud": False,
                 "verify_iss": False,

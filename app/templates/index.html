@@ -23,38 +23,62 @@
     (voir README). Pour la modifier : changer le ConfigMap/Secret puis redéployer le pod.
   </p>
 
-  {% if config.enable_pkce or config.enable_dpop %}
+  <form method="get" action="/login">
+    <details class="box">
+      <summary>
+        Paramètre ACR (optionnel)
+        <span class="box-summary" id="acr-summary"></span>
+      </summary>
+      <div class="box-body">
+        <p class="field-hint" style="margin-top: 0;">
+          Demande un niveau d'authentification (Authentication Context Class Reference)
+          spécifique à Keycloak pour ce login — utile pour tester des flows conditionnels
+          (step-up auth, OTP conditionnel…).
+        </p>
+        <label class="field-label">
+          acr_values (une ou plusieurs valeurs séparées par des espaces)
+          <input
+            class="field-input" type="text" name="acr_values" id="acr-values"
+            value="{{ config.acr_values or '' }}"
+            placeholder="ex: eidas2  ou  eidas1-mfa"
+          >
+        </label>
+        <label class="field-checkbox">
+          <input type="checkbox" name="acr_essential" id="acr-essential" value="true" {% if config.acr_essential %}checked{% endif %}>
+          <span>
+            Exiger strictement cette valeur en plus du hint <code>acr_values</code>
+            (ajoute le paramètre OIDC <code>claims</code> avec <code>essential: true</code> —
+            Keycloak doit alors échouer l'authentification s'il ne peut pas la satisfaire).
+          </span>
+        </label>
+      </div>
+    </details>
+
+    <button type="submit" class="btn">Se connecter (standard flow)</button>
+  </form>
+
+  <script>
+    // Rappelle dans le titre replie la valeur ACR qui sera envoyee, pour ne pas
+    // l'oublier quand elle est pre-remplie par ACR_VALUES.
+    (function () {
+      const values = document.getElementById('acr-values');
+      const essential = document.getElementById('acr-essential');
+      const summary = document.getElementById('acr-summary');
+      const refresh = () => {
+        const v = values.value.trim();
+        summary.textContent = v ? `— ${v}${essential.checked ? ' (strict)' : ''}` : '— aucun';
+      };
+      values.addEventListener('input', refresh);
+      essential.addEventListener('change', refresh);
+      refresh();
+    })();
+  </script>
+
+  {% if config.enable_recommandations %}{% include "_best_practices.html" %}{% endif %}
+
+  {% if config.enable_explanations and (config.enable_pkce or config.enable_dpop) %}
     <h2>Mécanismes activés</h2>
     {% if config.enable_pkce %}{% include "_pkce_info.html" %}{% endif %}
     {% if config.enable_dpop %}{% include "_dpop_info.html" %}{% endif %}
   {% endif %}
-
-  <form method="get" action="/login">
-    <div class="panel">
-      <strong>Paramètre ACR (optionnel)</strong>
-      <p class="field-hint">
-        Demande un niveau d'authentification (Authentication Context Class Reference)
-        spécifique à Keycloak pour ce login — utile pour tester des flows conditionnels
-        (step-up auth, OTP conditionnel…).
-      </p>
-      <label class="field-label">
-        acr_values (une ou plusieurs valeurs séparées par des espaces)
-        <input
-          class="field-input" type="text" name="acr_values"
-          value="{{ config.acr_values or '' }}"
-          placeholder="ex: eidas2  ou  eidas1-mfa"
-        >
-      </label>
-      <label class="field-checkbox">
-        <input type="checkbox" name="acr_essential" value="true" {% if config.acr_essential %}checked{% endif %}>
-        <span>
-          Exiger strictement cette valeur en plus du hint <code>acr_values</code>
-          (ajoute le paramètre OIDC <code>claims</code> avec <code>essential: true</code> —
-          Keycloak doit alors échouer l'authentification s'il ne peut pas la satisfaire).
-        </span>
-      </label>
-    </div>
-
-    <button type="submit" class="btn">Se connecter (standard flow)</button>
-  </form>
 {% endblock %}

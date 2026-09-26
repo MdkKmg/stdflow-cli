@@ -11,6 +11,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from .checks import run_checks
 from .config import HTTP_VERIFY_TLS, get_settings
 from .dpop import generate_dpop_jwk, jwk_thumbprint, public_jwk
 from .httplog import configure_logging, record_exchange
@@ -25,6 +26,7 @@ from .oidc import (
     verify_jwt_signature,
 )
 from .pkce import generate_pkce_pair
+from .recommendations import RECOMMENDATIONS, RECOMMENDATIONS_COUNT, REFERENCES
 from .store import StateStore
 
 BASE_DIR = Path(__file__).parent
@@ -60,7 +62,16 @@ async def healthz():
 
 @app.get("/")
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "config": settings.redacted()})
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "config": settings.redacted(),
+            "recommendations": RECOMMENDATIONS,
+            "recommendations_count": RECOMMENDATIONS_COUNT,
+            "references": REFERENCES,
+        },
+    )
 
 
 def _render_error(request: Request, error: str, error_description: str, status_code: int = 502):
@@ -87,10 +98,16 @@ def _annotate_dpop_proofs(transcript: list[dict]) -> None:
 @app.get("/login")
 async def login(request: Request, acr_values: str | None = None, acr_essential: bool = False):
     state = secrets.token_urlsafe(24)
+    nonce = secrets.token_urlsafe(24)
     transcript: list[dict] = []
 
     acr_values = (acr_values or "").strip() or None
-    entry: dict = {"transcript": transcript, "acr_values": acr_values, "acr_essential": acr_essential}
+    entry: dict = {
+        "transcript": transcript,
+        "nonce": nonce,
+        "acr_values": acr_values,
+        "acr_essential": acr_essential,
+    }
 
     code_verifier = code_challenge = None
     if settings.enable_pkce:
@@ -118,6 +135,7 @@ async def login(request: Request, acr_values: str | None = None, acr_essential: 
         settings,
         discovery,
         state,
+        nonce,
         code_challenge,
         acr_values=acr_values,
         acr_essential=acr_essential,
@@ -279,6 +297,17 @@ async def callback(
         # (Level of Authentication) configure pour le niveau demande.
         acr_essential_unmet = acr_essential and acr_match is not True
 
+    checks = None
+    if settings.enable_recommandations:
+        checks = run_checks(
+            settings,
+            discovery,
+            decoded,
+            nonce=entry.get("nonce"),
+            dpop_info=dpop_info,
+            acr_info=acr_info,
+        )
+
     logout_url = build_logout_url(settings, discovery, tokens.get("id_token"))
 
     return templates.TemplateResponse(
@@ -296,6 +325,7 @@ async def callback(
             "pkce_info": pkce_info,
             "dpop_info": dpop_info,
             "acr_info": acr_info,
+            "checks": checks,
             "logout_url": logout_url,
         },
     )

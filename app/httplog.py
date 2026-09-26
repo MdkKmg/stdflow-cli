@@ -3,7 +3,8 @@
 Chaque echange est capture dans un "transcript" (liste de dicts) attache a la
 tentative de login en cours, pour affichage dans l'UI de resultat, ET emis en
 JSON sur stdout via le logger standard (recupere par kube / le pilote de logs
-du cluster).
+du cluster). Les tokens et secrets du flow restent visibles dans l'UI (outil de
+debug) mais sont masques dans les logs, qui sont collectes et conserves.
 """
 
 from __future__ import annotations
@@ -17,6 +18,8 @@ import httpx
 
 SENSITIVE_HEADER_NAMES = {"authorization"}
 SENSITIVE_BODY_FIELDS = {"client_secret"}
+# Masques uniquement dans les logs : l'UI doit pouvoir les afficher.
+LOG_ONLY_SENSITIVE_BODY_FIELDS = {"access_token", "refresh_token", "id_token", "code", "code_verifier"}
 
 
 def configure_logging(level: str = "INFO") -> logging.Logger:
@@ -43,10 +46,17 @@ def redact_headers(headers: dict[str, Any] | None) -> dict[str, Any]:
     return redacted
 
 
-def redact_body(body: Any) -> Any:
+def redact_body(body: Any, fields: set[str] = SENSITIVE_BODY_FIELDS) -> Any:
     if isinstance(body, dict):
-        return {k: ("***redacted***" if k in SENSITIVE_BODY_FIELDS else v) for k, v in body.items()}
+        return {k: ("***redacted***" if k in fields else v) for k, v in body.items()}
     return body
+
+
+def _redact_for_log(entry: dict[str, Any]) -> dict[str, Any]:
+    fields = SENSITIVE_BODY_FIELDS | LOG_ONLY_SENSITIVE_BODY_FIELDS
+    return {
+        k: (redact_body(v, fields) if k in ("request_body", "response_body") else v) for k, v in entry.items()
+    }
 
 
 def _safe_response_body(response: httpx.Response) -> Any:
@@ -83,5 +93,5 @@ def record_exchange(
         entry["response_body"] = redact_body(_safe_response_body(response))
 
     transcript.append(entry)
-    logger.info(json.dumps({"event": "http_exchange", **entry}, default=str))
+    logger.info(json.dumps({"event": "http_exchange", **_redact_for_log(entry)}, default=str))
     return entry
