@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/icon.svg" width="96" alt="tokenlab"></p>
+
 # tokenlab
 
 Petite application (Python / FastAPI) pour tester une configuration Keycloak en
