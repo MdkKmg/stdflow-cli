@@ -11,7 +11,7 @@ import logging
 import urllib.parse
 from typing import Any
 
-import httpx
+import httpx2
 from jose import jwt as jose_jwt
 
 from .config import Settings
@@ -24,7 +24,7 @@ ASYMMETRIC_ALGS = ("RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256"
 
 
 async def fetch_discovery(
-    client: httpx.AsyncClient, settings: Settings, transcript: list, logger: logging.Logger
+    client: httpx2.AsyncClient, settings: Settings, transcript: list, logger: logging.Logger
 ) -> dict:
     url = settings.discovery_url
     response = await client.get(url)
@@ -93,7 +93,7 @@ def build_logout_url(settings: Settings, discovery: dict, id_token: str | None) 
 
 
 async def exchange_code_for_tokens(
-    client: httpx.AsyncClient,
+    client: httpx2.AsyncClient,
     settings: Settings,
     discovery: dict,
     *,
@@ -102,7 +102,7 @@ async def exchange_code_for_tokens(
     dpop_jwk: dict | None,
     transcript: list,
     logger: logging.Logger,
-) -> tuple[dict | None, httpx.Response]:
+) -> tuple[dict | None, httpx2.Response]:
     token_endpoint = discovery["token_endpoint"]
     data: dict[str, Any] = {
         "grant_type": "authorization_code",
@@ -155,7 +155,7 @@ async def exchange_code_for_tokens(
 
 
 async def call_userinfo(
-    client: httpx.AsyncClient,
+    client: httpx2.AsyncClient,
     discovery: dict,
     *,
     access_token: str,
@@ -225,7 +225,7 @@ def decode_jwt_unverified(token: str) -> dict:
 
 
 async def fetch_jwks(
-    client: httpx.AsyncClient, discovery: dict, transcript: list, logger: logging.Logger
+    client: httpx2.AsyncClient, discovery: dict, transcript: list, logger: logging.Logger
 ) -> dict | None:
     jwks_uri = discovery.get("jwks_uri")
     if not jwks_uri:
@@ -284,7 +284,7 @@ def verify_jwt_signature(token: str, jwks: dict | None) -> dict:
         return {"verified": False, "error": str(exc)}
 
 
-def _safe_json(response: httpx.Response) -> dict | None:
+def _safe_json(response: httpx2.Response) -> dict | None:
     try:
         return response.json()
     except ValueError:

@@ -14,7 +14,7 @@ import logging
 import sys
 from typing import Any
 
-import httpx
+import httpx2
 
 SENSITIVE_HEADER_NAMES = {"authorization"}
 SENSITIVE_BODY_FIELDS = {"client_secret"}
@@ -59,7 +59,7 @@ def _redact_for_log(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _safe_response_body(response: httpx.Response) -> Any:
+def _safe_response_body(response: httpx2.Response) -> Any:
     try:
         return response.json()
     except (json.JSONDecodeError, ValueError):
@@ -75,7 +75,7 @@ def record_exchange(
     url: str,
     request_headers: dict | None = None,
     request_body: Any = None,
-    response: httpx.Response | None = None,
+    response: httpx2.Response | None = None,
     note: str | None = None,
 ) -> dict:
     """Ajoute une entree au transcript et l'ecrit sur stdout. Retourne l'entree."""
