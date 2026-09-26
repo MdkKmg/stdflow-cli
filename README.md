@@ -1,6 +1,4 @@
-<p align="center"><img src="docs/tokenlab-icon.svg" width="96" alt="tokenlab"></p>
-
-# tokenlab
+# <img src="docs/tokenlab-icon.svg" height="40" align="left" alt="" > &nbsp;&nbsp;tokenlab
 
 Petite application (Python / FastAPI) pour tester une configuration Keycloak en
 réalisant un vrai login **standard flow** (Authorization Code) : elle logue
