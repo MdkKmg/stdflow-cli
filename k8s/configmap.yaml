@@ -9,6 +9,8 @@ data:
   KEYCLOAK_SCOPE: "openid profile email"
   ENABLE_PKCE: "true"
   ENABLE_DPOP: "false"
+  ENABLE_EXPLANATIONS: "true"
+  ENABLE_RECOMMANDATIONS: "true"
   # URL publique par laquelle les utilisateurs (et le navigateur, pour le redirect_uri) atteignent ce service
   PUBLIC_BASE_URL: "https://tokenlab.mon-cluster.example.com"
   LOG_LEVEL: "INFO"

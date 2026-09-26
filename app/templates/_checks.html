@@ -1,0 +1,29 @@
+{% set icons = {"ok": "✔", "warn": "⚠", "fail": "✘", "info": "ℹ", "na": "–"} %}
+<details class="section">
+  <summary>
+    <h2>
+      Contrôles des bonnes pratiques
+      <span class="count">
+        ({{ checks.counts.ok }} ✔{% if checks.counts.warn %} · {{ checks.counts.warn }} ⚠{% endif %}{% if checks.counts.fail %} · {{ checks.counts.fail }} ✘{% endif %})
+      </span>
+    </h2>
+  </summary>
+  <div class="panel checks">
+    <p class="field-hint" style="margin-top: 0;">
+      Points de la liste de bonnes pratiques vérifiables sur les tokens obtenus. Les autres
+      (journalisation, Valid Redirect URIs exactes, usage de l'ID token…) ne se voient pas
+      depuis tokenlab.
+    </p>
+    {% for group in checks.groups %}
+      <h3>{{ group.title }}</h3>
+      <table class="kv">
+        {% for check in group.checks %}
+          <tr class="check-{{ check.status }}">
+            <td><span class="check-icon">{{ icons[check.status] }}</span> {{ check.label }}</td>
+            <td>{{ check.detail }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% endfor %}
+  </div>
+</details>

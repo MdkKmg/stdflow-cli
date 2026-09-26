@@ -45,6 +45,36 @@
     .info-body ul, .info-body ol { margin: 0.5rem 0; padding-left: 1.4rem; }
     .info-body li { margin: 0.35rem 0; }
     .info-body code { font-family: var(--mono); background: #0b0e13; padding: 0.05rem 0.4rem; border-radius: 4px; font-size: 0.85em; }
+    .checklist { font-size: 0.88rem; }
+    .checklist h3 { font-size: 0.95rem; margin: 1.1rem 0 0.4rem; }
+    .checklist h3:first-child { margin-top: 0; }
+    .checklist p { margin: 0.6rem 0 0.3rem; }
+    .checklist ul { list-style: none; margin: 0.3rem 0; padding-left: 0; }
+    .checklist li { margin: 0.3rem 0; padding-left: 1.6rem; position: relative; }
+    .checklist li::before { content: "•"; position: absolute; left: 0.5rem; color: var(--muted); }
+    .checklist ul.refs li::before { content: "↗"; left: 0.3rem; }
+    .src {
+      display: inline-block; margin-left: 0.3rem; padding: 0 0.45rem; border-radius: 999px;
+      border: 1px solid var(--border); color: var(--muted); font-size: 0.72rem; text-decoration: none;
+      white-space: nowrap; vertical-align: 0.05em;
+    }
+    .src:hover { color: var(--accent); border-color: var(--accent); }
+    .checks h3 { font-size: 0.95rem; margin: 1.1rem 0 0.4rem; }
+    .checks table.kv td:first-child { width: 340px; font-family: inherit; color: var(--text); }
+    .checks table.kv td:last-child { color: var(--muted); font-size: 0.82rem; }
+    .check-icon { display: inline-block; width: 1.2em; font-weight: 700; }
+    .check-ok .check-icon { color: var(--ok); }
+    .check-warn .check-icon { color: var(--warn); }
+    .check-fail .check-icon { color: var(--err); }
+    .check-info .check-icon { color: var(--accent); }
+    .check-na .check-icon, .check-na td:first-child { color: var(--muted); }
+    .checklist code { font-family: var(--mono); background: #0b0e13; padding: 0.05rem 0.4rem; border-radius: 4px; font-size: 0.85em; }
+    details.box { background: var(--panel); border-radius: 10px; margin-bottom: 1.25rem; }
+    details.box > summary { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-weight: 600; font-size: 0.95rem; padding: 0.9rem 1.5rem; }
+    details.box > summary::before { content: "▸"; display: inline-block; width: 1em; color: var(--muted); transition: transform 0.15s; }
+    details.box[open] > summary::before { transform: rotate(90deg); }
+    .box-summary { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: 0.82rem; }
+    .box-body { padding: 0 1.5rem 1.25rem; }
     .match-ok { color: var(--ok); font-weight: 600; }
     .match-warn { color: var(--err); font-weight: 600; }
     .field-label { display: block; font-size: 0.85rem; margin-top: 0.7rem; }
@@ -77,6 +107,11 @@
     .btn-copy:hover { border-color: var(--accent); background: rgba(90,169,255,0.1); }
     summary .status.s2 { color: var(--ok); }
     summary .status.s4, summary .status.s5 { color: var(--err); }
+    details.section { background: none; border: none; border-radius: 0; margin: 0; }
+    details.section > summary { padding: 0; display: block; }
+    details.section > summary > h2::before { content: "▸"; display: inline-block; width: 1.1em; color: var(--muted); transition: transform 0.15s; }
+    details.section[open] > summary > h2::before { transform: rotate(90deg); }
+    details.section > summary > h2 .count { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
     details .body { padding: 0 1rem 1rem; }
     details .body h4 { margin: 0.8rem 0 0.3rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
     .banner { padding: 0.9rem 1.1rem; border-radius: 8px; font-weight: 600; margin-bottom: 1.5rem; }

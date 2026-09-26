@@ -37,6 +37,16 @@ class Settings(BaseSettings):
     enable_dpop: bool = Field(
         default=False, description="Active DPoP (RFC 9449) pour le token endpoint et userinfo"
     )
+    enable_explanations: bool = Field(
+        default=True,
+        description="Affiche les sections pedagogiques de l'UI (echanges HTTP, PKCE, DPoP)",
+    )
+    enable_recommandations: bool = Field(
+        default=True,
+        description=(
+            "Affiche les bonnes pratiques OIDC (accueil) et leurs controles sur les tokens obtenus (resultat)"
+        ),
+    )
     acr_values: str | None = Field(
         default=None,
         description=(
@@ -100,6 +110,8 @@ class Settings(BaseSettings):
             "keycloak_scope": self.keycloak_scope,
             "enable_pkce": self.enable_pkce,
             "enable_dpop": self.enable_dpop,
+            "enable_explanations": self.enable_explanations,
+            "enable_recommandations": self.enable_recommandations,
             "acr_values": self.acr_values,
             "acr_essential": self.acr_essential,
             "http_verify_tls": HTTP_VERIFY_TLS,

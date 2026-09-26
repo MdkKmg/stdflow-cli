@@ -1,0 +1,25 @@
+{% macro sources(items) %}{% for s in items %} <a class="src" href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ s.label }}</a>{% endfor %}{% endmacro %}
+<details class="section">
+  <summary><h2>Bonnes pratiques minimales — Clients OIDC Keycloak <span class="count">({{ recommendations_count }} points)</span></h2></summary>
+  <div class="panel checklist">
+    {% for section in recommendations %}
+      <h3>{{ section.title }}</h3>
+      {% for group in section.groups %}
+        {% if group.title %}<p><strong>{{ group.title }}</strong>{{ sources(group.sources) }}</p>{% endif %}
+        <ul>
+          {% for item in group["items"] %}
+            <li>{{ item.text }}{{ sources(item.sources) }}</li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+    {% endfor %}
+
+    <h3>Références</h3>
+    <ul class="refs">
+      {% for ref in references %}
+        <li><a href="{{ ref.url }}" target="_blank" rel="noopener noreferrer">{{ ref.label }}</a></li>
+      {% endfor %}
+    </ul>
+    <p class="field-hint">Les points vérifiables depuis tokenlab sont contrôlés sur les tokens obtenus, en page de résultat.</p>
+  </div>
+</details>
