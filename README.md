@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/icon.svg" width="96" alt="tokenlab"></p>
+<p align="center"><img src="docs/tokenlab-icon.svg" width="96" alt="tokenlab"></p>
 
 # tokenlab
 
