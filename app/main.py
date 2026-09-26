@@ -5,7 +5,7 @@ import secrets
 import time
 from pathlib import Path
 
-import httpx
+import httpx2
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -63,9 +63,9 @@ async def healthz():
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "config": settings.redacted(),
             "recommendations": RECOMMENDATIONS,
             "recommendations_count": RECOMMENDATIONS_COUNT,
@@ -76,8 +76,9 @@ async def index(request: Request):
 
 def _render_error(request: Request, error: str, error_description: str, status_code: int = 502):
     return templates.TemplateResponse(
+        request,
         "error.html",
-        {"request": request, "error": error, "error_description": error_description},
+        {"error": error, "error_description": error_description},
         status_code=status_code,
     )
 
@@ -121,9 +122,11 @@ async def login(request: Request, acr_values: str | None = None, acr_essential: 
         entry["dpop_jwk"] = dpop_jwk
 
     try:
-        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS) as client:
+        async with httpx2.AsyncClient(
+            timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS
+        ) as client:
             discovery = await fetch_discovery(client, settings, transcript, logger)
-    except httpx.HTTPError as exc:
+    except httpx2.HTTPError as exc:
         logger.error(json.dumps({"event": "discovery_failed", "error": str(exc)}))
         return _render_error(
             request,
@@ -169,9 +172,9 @@ async def callback(
 
     if error or entry is None:
         return templates.TemplateResponse(
+            request,
             "error.html",
             {
-                "request": request,
                 "error": error or "state_invalide_ou_expire",
                 "error_description": error_description
                 or (
@@ -199,7 +202,9 @@ async def callback(
     acr_essential = entry.get("acr_essential", False)
 
     try:
-        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS) as client:
+        async with httpx2.AsyncClient(
+            timeout=settings.http_timeout_seconds, verify=HTTP_VERIFY_TLS
+        ) as client:
             tokens, token_response = await exchange_code_for_tokens(
                 client,
                 settings,
@@ -214,9 +219,9 @@ async def callback(
             if tokens is None:
                 _annotate_dpop_proofs(transcript)
                 return templates.TemplateResponse(
+                    request,
                     "result.html",
                     {
-                        "request": request,
                         "config": settings.redacted(),
                         "transcript": transcript,
                         "success": False,
@@ -241,11 +246,11 @@ async def callback(
 
             try:
                 jwks = await fetch_jwks(client, discovery, transcript, logger)
-            except httpx.HTTPError:
+            except httpx2.HTTPError:
                 # best-effort : la verification de signature reste informative, ne doit
                 # pas transformer un login reussi en page d'erreur.
                 jwks = None
-    except httpx.HTTPError as exc:
+    except httpx2.HTTPError as exc:
         logger.error(json.dumps({"event": "token_exchange_failed", "error": str(exc)}))
         return _render_error(
             request,
@@ -311,9 +316,9 @@ async def callback(
     logout_url = build_logout_url(settings, discovery, tokens.get("id_token"))
 
     return templates.TemplateResponse(
+        request,
         "result.html",
         {
-            "request": request,
             "config": settings.redacted(),
             "transcript": transcript,
             "success": True,
